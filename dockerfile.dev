@@ -1,0 +1,9 @@
+# ===== Desarrollo =====
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+# Montaremos el código con volumes, no lo copiamos aquí
+CMD ["npm", "run", "dev"]
