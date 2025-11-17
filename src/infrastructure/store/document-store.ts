@@ -9,7 +9,8 @@ interface DocumentStore {
   currentMiniStepIndex: number
   apiData: ApiResponse[]
   isModalOpen: boolean
-
+    // 👉 NUEVO
+  formValues: Record<string, string>
   setSteps: (steps: MainStep[]) => void
   updateMiniStep: (stepIdx: number, miniStepIdx: number, updates: Partial<MiniStep>) => void
   setCurrentStepIndex: (index: number) => void
@@ -20,14 +21,19 @@ interface DocumentStore {
   getTotalMiniSteps: () => number
   getCompletedSteps: () => number
   getCurrentMiniStep: () => MiniStep | undefined
+   // 👉 NUEVO
+  updateField: (field: string, value: string) => void
+  resetForm: () => void
 }
-
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   steps: [],
   currentStepIndex: 0,
   currentMiniStepIndex: 0,
   apiData: [],
   isModalOpen: false,
+
+  // 👉 NUEVO
+  formValues: {},
 
   setSteps: (steps) => set({ steps }),
 
@@ -80,4 +86,16 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     const state = get()
     return state.steps[state.currentStepIndex]?.miniSteps[state.currentMiniStepIndex]
   },
+
+  // 👉 NUEVO: actualizar un campo
+  updateField: (field, value) =>
+    set((state) => ({
+      formValues: {
+        ...state.formValues,
+        [field]: value,
+      },
+    })),
+
+  // 👉 NUEVO: limpiar formulario
+  resetForm: () => set({ formValues: {} }),
 }))

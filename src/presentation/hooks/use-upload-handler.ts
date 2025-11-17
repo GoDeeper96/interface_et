@@ -5,6 +5,7 @@ import { useDocumentStore } from "../../infrastructure/store/document-store"
 import { validateKickOff } from "../../application/services/validation/kickoff-validator.service"
 import { uploadKickOffUseCase,uploadBibliografiaUseCase,uploadSilabusUseCase } from "../../application/usecases"
 import { validateBibliografiaList } from "../../application/services/validation/bibliografia-validator.service"
+import { validateSilabus } from "../../application/services/validation/silabus-validator.service"
 
 
 interface UseUploadHandlerProps {
@@ -34,10 +35,16 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
     },
     [steps, updateMiniStep, onMessage],
   )
-
+ 
   const handleUpload = useCallback(
     async (stepIdx: number, miniStepIdx: number) => {
       const miniStep = steps[stepIdx].miniSteps[miniStepIdx]
+       // 🚨 Validación de cod_curso
+    const { formValues } = useDocumentStore.getState()
+    if (!formValues?.cod_curso) {
+      onMessage("Error: Falta el código de curso (cod_curso). Por favor complétalo antes de subir archivos.", "error")
+      return
+    }
       if (!miniStep.fileList.length) {
         onMessage(`Selecciona un archivo para ${miniStep.title}`, "error")
         return
@@ -50,14 +57,14 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
 
         switch (miniStep.title) {
           case "KickOff":
-            apiResponse = await uploadKickOffUseCase({file:miniStep.fileList[0],documentType:"kickoff"})
+            apiResponse = await uploadKickOffUseCase({file:miniStep.fileList[0],documentType:"KickOff"})
         
             break
           case "Bibliografía":
-            apiResponse = await uploadBibliografiaUseCase({file:miniStep.fileList[0],documentType:"bibliografia"})
+            apiResponse = await uploadBibliografiaUseCase({file:miniStep.fileList[0],documentType:"Bibliografía"})
             break
           case "Silabus":
-            apiResponse = await uploadSilabusUseCase({file:miniStep.fileList[0],documentType:"silabus"})
+            apiResponse = await uploadSilabusUseCase({file:miniStep.fileList[0],documentType:"Silabus"})
             break
           default:
             throw new Error("Documento no soportado")
@@ -79,6 +86,19 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
         if (miniStep.title === "Bibliografía") {
     
           const validation = validateBibliografiaList(apiResponse.data)
+          updateMiniStep(stepIdx, miniStepIdx, {
+            fieldValidations: validation.fieldValidations,
+            completed: validation.isValid,
+            validationStatus: validation.isValid ? "success" : "error",
+            uploading: false,
+          })
+          if (validation.isValid) {
+            onMessage(`${miniStep.title} procesado correctamente`, "success")
+          }
+        }
+        if (miniStep.title === "Silabus") {
+          console.log(apiResponse.data)
+          const validation = validateSilabus(apiResponse.data)
           updateMiniStep(stepIdx, miniStepIdx, {
             fieldValidations: validation.fieldValidations,
             completed: validation.isValid,

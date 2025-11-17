@@ -3,7 +3,7 @@
 //   BIBLIOGRAFIA_URL: process.env.NEXT_PUBLIC_BIBLIOGRAFIA_API_URL || "https://api.example.com/upload_bibliografia",
 //   SILABUS_URL: process.env.NEXT_PUBLIC_SILABUS_API_URL || "https://api.example.com/upload_silabus",
 // }
-const API_BASE_URL = "http://localhost:8000/parsing"
+const API_BASE_URL = "http://192.168.18.3:8000/parsing"
 
 const API_ENDPOINTS = {
   KICKOFF: `${API_BASE_URL}/kickoff`,

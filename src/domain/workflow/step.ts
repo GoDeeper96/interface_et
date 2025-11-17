@@ -30,10 +30,18 @@ export interface MiniStep {
   requiredFields: RequiredField[]
 }
 
+export interface RequirementData {
+  id:string
+  label: string,
+  field: string,
+  type:string
+}
+
 export interface MainStep {
   id: string
   title: string
   description: string
+  requirementData?:RequirementData[]
   miniSteps: MiniStep[]
   icon: React.ReactElement
 }

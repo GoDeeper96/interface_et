@@ -2,6 +2,7 @@ import axios from "axios"
 
 import { API_CONFIG } from "../config/api-config"
 import type { ApiResponse } from "../../domain/base/api-response"
+import { useDocumentStore } from "../store/document-store"
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -37,10 +38,13 @@ export const uploadBibliografiaAPI = async (file: File): Promise<ApiResponse> =>
 }
 
 export const uploadSilabusAPI = async (file: File): Promise<ApiResponse> => {
+    const dataStore = useDocumentStore.getState()
+    console.log(dataStore)
   const base64Content = await fileToBase64(file)
   const response = await axios.post(API_CONFIG.SILABUS_URL, {
     content_base64: base64Content,
     filename: file.name,
+    cod_curso:dataStore.formValues.cod_curso
   })
   return response.data
 }
