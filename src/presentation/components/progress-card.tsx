@@ -1,10 +1,10 @@
-"use client"
-
 import type React from "react"
-import { Card, Button, Text, Title2, ProgressBar } from "@fluentui/react-components"
-import { ArrowLeftRegular, ArrowRightRegular } from "@fluentui/react-icons"
+import { Card, Button, Text, Title2, ProgressBar, Input, Label, Field } from "@fluentui/react-components"
+import { ArrowLeftRegular, ArrowRightRegular, CheckmarkCircleRegular, CheckmarkLock16Filled, CheckmarkLockRegular, LockClosedFilled } from "@fluentui/react-icons"
 import { CheckmarkCircleFilled, DismissCircleFilled, CircleFilled } from "@fluentui/react-icons"
-import type { MainStep } from "../../domain/workflow/step"
+import type { MainStep, RequirementData } from "../../domain/workflow/step"
+import { useState } from "react"
+import { useDocumentStore } from "../../infrastructure/store/document-store"
 
 interface ProgressCardProps {
   steps: MainStep[]
@@ -16,6 +16,9 @@ interface ProgressCardProps {
   onPreviousClick: () => void
   onNextClick: () => void
   onMiniStepSelect: (index: number) => void
+  requirementData?: RequirementData[];
+onRequirementChange?: (field: string, value: string) => void;
+formValues?: Record<string, string>;
 }
 
 export const ProgressCard: React.FC<ProgressCardProps> = ({
@@ -24,7 +27,9 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
   currentMiniStepIndex,
   completedMiniSteps,
   totalMiniSteps,
- 
+  requirementData,
+  formValues,
+  onRequirementChange,
   onPreviousClick,
   onNextClick,
   onMiniStepSelect,
@@ -40,14 +45,31 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
         return <CircleFilled style={{ color: "#8a8886", fontSize: "24px" }} />
     }
   }
+  const { updateField } = useDocumentStore()
 
   const progressValue = totalMiniSteps > 0 ? (completedMiniSteps / totalMiniSteps) * 100 : 0
   const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
 
-  const canGoNext =
-    currentMiniStep?.validationStatus === "success" &&
-    currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1
+  const [lockedFields, setLockedFields] = useState<Record<string, boolean>>({});
+const handleSetField = (field: string) => {
+  setLockedFields((prev) => ({ ...prev, [field]: true }))
+}
+const handleUnlockField = (field: string) => {
+  setLockedFields((prev) => ({
+    ...prev,
+    [field]: !prev[field]
+  }));
+};
 
+const canGoNext =
+  currentMiniStep?.validationStatus === "success" &&
+  Object.values(requirementData ?? {}).every((r) =>
+    (formValues?.[r.field] ?? "").trim()
+  ) &&
+  currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1
+  console.log(steps)
+  console.log(formValues)
+  console.log(requirementData)
   return (
     <Card
       style={{
@@ -59,17 +81,75 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
         overflowY: "auto",
       }}
     >
-      <Title2 style={{ marginBottom: "16px", color: "#0078d4", flexShrink: 0 }}>Progreso General</Title2>
+      <Title2 style={{ marginBottom: "16px", color: "#0078d4", flexShrink: 0 }}>Progreso</Title2>
 
       <Text weight="semibold" size={300} style={{ marginBottom: "12px", color: "#323130" }}>
         Paso {currentStepIndex + 1}/{steps.length}
       </Text>
 
       <ProgressBar value={progressValue} max={100} style={{ marginBottom: "16px" }} />
-      <Text size={200} style={{ color: "#666", marginBottom: "24px" }}>
-        {completedMiniSteps}/{totalMiniSteps} requerimientos completados
-      </Text>
+      
+        {requirementData && requirementData.length > 0 && (
+        <div style={{ marginBottom: "20px" }}>
+          <Text weight="semibold" size={300} style={{ marginBottom: "8px" }}>
+            Requerimientos de información
+          </Text>
 
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {requirementData.map((req) => (
+              <div key={req.id} style={{margin: "1rem",marginRight:"0.5rem",marginLeft:"0.5rem" }}>
+                {/* <Label htmlFor={req.id}>{req.label}</Label> */}
+
+                {req.type === "input" && (
+                  <Field label={req.label} required>
+                  <Input
+                      id={req.id}
+                      style={{ width: "100%" }}
+                      value={formValues?.[req.field] ?? ""}
+                      onChange={(e) => {
+                          const value = e.target.value
+                          updateField(req.field, value)
+                          onRequirementChange?.(req.field, value)
+                        }}
+                      disabled={lockedFields[req.field] === true}
+                      contentAfter={
+                        <span
+                          onClick={() => {
+                            if (lockedFields[req.field]) {
+                              handleUnlockField(req.field)
+                            } else {
+                              handleSetField(req.field)
+                            }
+                          }}
+                          style={{
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          {lockedFields[req.field] ? (
+                            <CheckmarkLockRegular
+                              style={{ fontSize: "20px", color: "#888888ff" }}
+                            />
+                          ) : (
+                            <CheckmarkCircleRegular
+                              style={{ fontSize: "20px", color: "#11da0aff" }}
+                            />
+                          )}
+                        </span>
+                      }
+                    />
+                
+                  </Field>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <Text weight="semibold" size={300} style={{ marginBottom: "12px", color: "#323130" }}>
+        Requerimientos Completados {completedMiniSteps}/{totalMiniSteps} 
+      </Text>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1, marginBottom: "24px" }}>
         {steps[currentStepIndex].miniSteps.map((miniStep, idx) => (
           <div

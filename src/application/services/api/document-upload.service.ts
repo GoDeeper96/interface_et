@@ -2,7 +2,7 @@ import axios from "axios"
 import type { ApiResponse } from "../../../domain/base/api-response"
 
 
-const API_BASE_URL = "http://localhost:8000/parsing"
+const API_BASE_URL = "http://192.168.18.3:8000/parsing"
 
 const API_ENDPOINTS = {
   KICKOFF: `${API_BASE_URL}/kickoff`,

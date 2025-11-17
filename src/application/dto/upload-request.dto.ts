@@ -2,12 +2,13 @@ import type { ApiResponse } from "../../domain/base/api-response"
 
 export interface UploadRequestDTO {
   file: File
-  documentType?: "kickoff" | "silabus" | "bibliografia"
+  documentType: "KickOff" | "Silabus" | "Bibliografía"
+  
 }
 export interface UploadResponseDTO extends ApiResponse {
   success:boolean,
   error?:string,
-  data: Record<string, any> // o los campos extra que tengas
+  data: any | null // o los campos extra que tengas
 }
 // export interface UploadResponseDTO {
 //   success: boolean

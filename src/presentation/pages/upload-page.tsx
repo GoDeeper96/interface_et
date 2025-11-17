@@ -14,6 +14,8 @@ import { useUploadHandler } from "../hooks/use-upload-handler"
 import type { MainStep } from "../../domain/workflow/step"
 import { KICKOFF_REQUIRED_FIELDS } from "../../domain/workflow/kickoff-fields"
 import { useDocumentStore } from "../../infrastructure/store/document-store"
+import { SILABUS_REQUIRED_FIELDS } from "../../application/services/validation/silabus-validator.service"
+import { BIBLIOGRAFIA_REQUIRED_FIELDS } from "../../application/services/validation/bibliografia-validator.service"
 type MessageIntent = "info" | "success" | "warning" | "error"
 const UploadPage: React.FC = () => {
   const [message, setMessage] = useState<{ text: string; type: MessageIntent } | null>(null)
@@ -28,6 +30,7 @@ const UploadPage: React.FC = () => {
     currentMiniStepIndex,
     apiData,
     setSteps,
+    setCurrentStepIndex,
     setCurrentMiniStepIndex,
     getCompletedMiniSteps,
     getTotalMiniSteps,
@@ -38,9 +41,12 @@ const UploadPage: React.FC = () => {
     setMessage({ text, type })
     setTimeout(() => setMessage(null), 5000)
   }
-
+  const [formValues, setFormValues] = useState<Record<string, string>>({})
+  
   const { handleFileSelect, handleUpload } = useUploadHandler({ onMessage: showMessage })
-
+  const handleRequirementChange = (field: string, value: string) => {
+  setFormValues((prev) => ({ ...prev, [field]: value }))
+}
   // Initialize steps
   useEffect(() => {
     if (steps.length === 0) {
@@ -49,8 +55,32 @@ const UploadPage: React.FC = () => {
           id: "step1",
           title: "Subir documentos de estructuramiento",
           description: "Archivos necesarios para el proyecto",
+          requirementData:[{
+            field:"cod_curso",
+            id:"cc1",
+            label:"Codigo del curso",
+            type:"input"
+          }],
           icon: <DocumentRegular />,
           miniSteps: [
+            {
+              id: "silabus",
+              title: "Silabus",
+              description: "Silabus del curso (Word o Excel)",
+              allowedExtensions: ["docx", "xlsx", "xls"],
+              fileList: [],
+              completed: false,
+              uploading: false,
+              icon: <ClipboardTaskRegular />,
+              documentInfo: {
+                purpose: "Plan de estudios detallado con contenidos y evaluaciones",
+                requirements: ["Objetivos de aprendizaje", "Cronograma de clases", "Sistema de evaluación"],
+                examples: ["Silabus_Curso_2024.docx", "Plan_Estudios.xlsx"],
+              },
+              validationStatus: "pending",
+              fieldValidations: [],
+              requiredFields: SILABUS_REQUIRED_FIELDS,
+            },
             {
               id: "kickoff",
               title: "KickOff",
@@ -85,27 +115,24 @@ const UploadPage: React.FC = () => {
               },
               validationStatus: "pending",
               fieldValidations: [],
-              requiredFields: [],
+              requiredFields: BIBLIOGRAFIA_REQUIRED_FIELDS,
             },
-            {
-              id: "silabus",
-              title: "Silabus",
-              description: "Silabus del curso (Word o Excel)",
-              allowedExtensions: ["docx", "xlsx", "xls"],
-              fileList: [],
-              completed: false,
-              uploading: false,
-              icon: <ClipboardTaskRegular />,
-              documentInfo: {
-                purpose: "Plan de estudios detallado con contenidos y evaluaciones",
-                requirements: ["Objetivos de aprendizaje", "Cronograma de clases", "Sistema de evaluación"],
-                examples: ["Silabus_Curso_2024.docx", "Plan_Estudios.xlsx"],
-              },
-              validationStatus: "pending",
-              fieldValidations: [],
-              requiredFields: [],
-            },
+            
           ],
+        },
+        {
+          id:"step2",
+          title:"Generar esquema de curso y actividades",
+          description:"Archivos necesarios para generar un esquema de curso y actividades",
+          icon:<DocumentRegular/>,
+          miniSteps:[]
+        },
+        {
+          id:"step3",
+          title:"Generar IPES",
+          description:"Archivos necesarios para generar IPES",
+          icon:<DocumentRegular/>,
+          miniSteps:[]
         },
       ]
       setSteps(initialSteps)
@@ -113,25 +140,54 @@ const UploadPage: React.FC = () => {
   }, [steps.length, setSteps])
 
   // 🟢 Autoavance solo una vez por validación exitosa
+  // useEffect(() => {
+  //   if (steps.length === 0) return
+
+  //   const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
+  //   const stepId = currentMiniStep?.id
+
+  //   if (
+  //     currentMiniStep?.validationStatus === "success" &&
+  //     stepId !== lastValidatedStep && // Evita repetir el avance
+  //     currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1
+  //   ) {
+  //     setLastValidatedStep(stepId)
+  //     const timer = setTimeout(() => {
+  //       setCurrentMiniStepIndex(currentMiniStepIndex + 1)
+  //     }, 1000)
+  //     return () => clearTimeout(timer)
+  //   }
+  // }, [steps, currentMiniStepIndex, currentStepIndex, setCurrentMiniStepIndex, lastValidatedStep])
   useEffect(() => {
-    if (steps.length === 0) return
+  if (steps.length === 0) return
 
-    const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
-    const stepId = currentMiniStep?.id
+  const currentStep = steps[currentStepIndex]
+  const currentMiniStep = currentStep?.miniSteps[currentMiniStepIndex]
+  const stepId = currentMiniStep?.id
 
-    if (
-      currentMiniStep?.validationStatus === "success" &&
-      stepId !== lastValidatedStep && // Evita repetir el avance
-      currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1
-    ) {
-      setLastValidatedStep(stepId)
-      const timer = setTimeout(() => {
+  // Si el miniStep actual ya fue validado con éxito
+  if (currentMiniStep?.validationStatus === "success" && stepId !== lastValidatedStep) {
+    setLastValidatedStep(stepId)
+
+    const timer = setTimeout(() => {
+      // Si no es el último miniStep del step actual, avanzamos al siguiente miniStep
+      if (currentMiniStepIndex < currentStep.miniSteps.length - 1) {
         setCurrentMiniStepIndex(currentMiniStepIndex + 1)
-      }, 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [steps, currentMiniStepIndex, currentStepIndex, setCurrentMiniStepIndex, lastValidatedStep])
+      } else {
+        // ⚡ Todos los miniSteps del step actual completados: pasar al siguiente step
+        if (currentStepIndex < steps.length - 1) {
+          setCurrentMiniStepIndex(0) // reset para el siguiente step
+          // setSteps(prev => [...prev]) // opcional si quieres forzar re-render
+          // Aquí se actualiza el currentStepIndex
+          // Ideal si usas un setter global, ej:
+          useDocumentStore.getState().setCurrentStepIndex(currentStepIndex + 1)
+        }
+      }
+    }, 1000)
 
+    return () => clearTimeout(timer)
+  }
+}, [steps, currentMiniStepIndex, currentStepIndex, lastValidatedStep])
   const completedMiniSteps = getCompletedMiniSteps()
   const totalMiniSteps = getTotalMiniSteps()
   const completedSteps = getCompletedSteps()
@@ -141,18 +197,37 @@ const UploadPage: React.FC = () => {
   console.log(currentMiniStep?.title)
   const apiResponse = apiData.find((item) => item.documentType === currentMiniStep?.title)
   console.log(apiResponse)
-  const handlePrevious = () => {
-    if (currentMiniStepIndex > 0) {
-      setCurrentMiniStepIndex(currentMiniStepIndex - 1)
-    }
-  }
+  // const handlePrevious = () => {
+  //   if (currentMiniStepIndex > 0) {
+  //     setCurrentMiniStepIndex(currentMiniStepIndex - 1)
+  //   }
+  // }
 
+  // const handleNext = () => {
+  //   if (currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1) {
+  //     setCurrentMiniStepIndex(currentMiniStepIndex + 1)
+  //   }
+  // }
   const handleNext = () => {
-    if (currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1) {
-      setCurrentMiniStepIndex(currentMiniStepIndex + 1)
-    }
-  }
+  const currentStep = steps[currentStepIndex]
 
+  if (currentMiniStepIndex < currentStep.miniSteps.length - 1) {
+    setCurrentMiniStepIndex(currentMiniStepIndex + 1)
+  } else if (currentStepIndex < steps.length - 1) {
+    setCurrentStepIndex(currentStepIndex + 1)
+    setCurrentMiniStepIndex(0)
+  }
+}
+
+const handlePrevious = () => {
+  if (currentMiniStepIndex > 0) {
+    setCurrentMiniStepIndex(currentMiniStepIndex - 1)
+  } else if (currentStepIndex > 0) {
+    const prevStep = steps[currentStepIndex - 1]
+    setCurrentStepIndex(currentStepIndex - 1)
+    setCurrentMiniStepIndex(prevStep.miniSteps.length - 1)
+  }
+}
   const handleMiniStepSelect = (index: number) => {
     if (index === 0 || steps[currentStepIndex].miniSteps[index - 1].validationStatus === "success") {
       setCurrentMiniStepIndex(index)
@@ -168,6 +243,7 @@ const UploadPage: React.FC = () => {
           padding: "24px",
           gap: "24px",
           backgroundColor: "#fafafa",
+            boxSizing: "border-box", // ⬅️ aquí
           fontFamily: "Segoe UI, system-ui, sans-serif",
         }}
       >
@@ -223,6 +299,9 @@ const UploadPage: React.FC = () => {
               onPreviousClick={handlePrevious}
               onNextClick={handleNext}
               onMiniStepSelect={handleMiniStepSelect}
+              requirementData={steps[currentStepIndex]?.requirementData}
+              onRequirementChange={handleRequirementChange}
+              formValues={formValues}
             />
           </div>
         )}
