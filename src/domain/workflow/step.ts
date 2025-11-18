@@ -1,5 +1,6 @@
 import type React from "react"
 import type { FieldValidation } from "../base/validation-results"
+import type { SchemaDTO, SchemaDTO_Original } from "../../application/dto/schema.dto"
 
 
 export interface RequiredField {
@@ -28,6 +29,7 @@ export interface MiniStep {
   validationStatus: "pending" | "error" | "success"
   fieldValidations: FieldValidation[]
   requiredFields: RequiredField[]
+  
 }
 
 export interface RequirementData {
@@ -44,4 +46,6 @@ export interface MainStep {
   requirementData?:RequirementData[]
   miniSteps: MiniStep[]
   icon: React.ReactElement
+  output?: SchemaDTO_Original
+  completed?: boolean
 }
