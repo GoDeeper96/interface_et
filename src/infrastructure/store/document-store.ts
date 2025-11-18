@@ -2,29 +2,47 @@ import { create } from "zustand"
 import type { MainStep, MiniStep } from "../../domain/workflow/step"
 import type { ApiResponse } from "../../domain/base/api-response"
 
-
 interface DocumentStore {
   steps: MainStep[]
   currentStepIndex: number
   currentMiniStepIndex: number
   apiData: ApiResponse[]
   isModalOpen: boolean
-    // 👉 NUEVO
+
+  // Formulario
   formValues: Record<string, string>
+  updateField: (field: string, value: string) => void
+  resetForm: () => void
+
+  // Actualización de steps
   setSteps: (steps: MainStep[]) => void
   updateMiniStep: (stepIdx: number, miniStepIdx: number, updates: Partial<MiniStep>) => void
+  updateMainStep: (stepIdx: number, updates: Partial<MainStep>) => void
+
+  // Navegación entre steps
   setCurrentStepIndex: (index: number) => void
   setCurrentMiniStepIndex: (index: number) => void
+
+  // API responses
   addApiResponse: (response: ApiResponse) => void
+
+  // Modal
   setIsModalOpen: (isOpen: boolean) => void
+
+  // Progreso global
   getCompletedMiniSteps: () => number
   getTotalMiniSteps: () => number
   getCompletedSteps: () => number
   getCurrentMiniStep: () => MiniStep | undefined
-   // 👉 NUEVO
-  updateField: (field: string, value: string) => void
-  resetForm: () => void
+
+  // Flags de generación de schema
+  isGeneratingSchema: boolean
+  setGeneratingSchema: (value: boolean) => void
+
+  schemaGenerated: boolean
+  setSchemaGenerated: (val: boolean) => void
 }
+
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   steps: [],
   currentStepIndex: 0,
@@ -32,12 +50,35 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   apiData: [],
   isModalOpen: false,
 
-  // 👉 NUEVO
-  formValues: {},
+  // Flags del workflow de schema
+  isGeneratingSchema: false,
+  setGeneratingSchema: (value) => set({ isGeneratingSchema: value }),
 
+  schemaGenerated: false,
+  setSchemaGenerated: (val) => set({ schemaGenerated: val }),
+
+  // Formulario
+  formValues: {},
+  updateField: (field, value) =>
+    set((state) => ({
+      formValues: {
+        ...state.formValues,
+        [field]: value,
+      },
+    })),
+  resetForm: () => set({ formValues: {} }),
+
+  // Steps
   setSteps: (steps) => set({ steps }),
 
-  updateMiniStep: (stepIdx, miniStepIdx, updates) => {
+  updateMainStep: (stepIdx, updates) =>
+    set((state) => {
+      const newSteps = [...state.steps]
+      newSteps[stepIdx] = { ...newSteps[stepIdx], ...updates }
+      return { steps: newSteps }
+    }),
+
+  updateMiniStep: (stepIdx, miniStepIdx, updates) =>
     set((state) => {
       const newSteps = [...state.steps]
       newSteps[stepIdx].miniSteps[miniStepIdx] = {
@@ -45,13 +86,14 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         ...updates,
       }
       return { steps: newSteps }
-    })
-  },
+    }),
 
+  // Navegación
   setCurrentStepIndex: (index) => set({ currentStepIndex: index }),
   setCurrentMiniStepIndex: (index) => set({ currentMiniStepIndex: index }),
 
-  addApiResponse: (response) => {
+  // API Data
+  addApiResponse: (response) =>
     set((state) => {
       const existingIndex = state.apiData.findIndex((item) => item.documentType === response.documentType)
       if (existingIndex >= 0) {
@@ -60,11 +102,12 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         return { apiData: updated }
       }
       return { apiData: [...state.apiData, response] }
-    })
-  },
+    }),
 
+  // Modal
   setIsModalOpen: (isOpen) => set({ isModalOpen: isOpen }),
 
+  // Progreso
   getCompletedMiniSteps: () => {
     const state = get()
     return state.steps.reduce((total, step) => {
@@ -86,16 +129,4 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     const state = get()
     return state.steps[state.currentStepIndex]?.miniSteps[state.currentMiniStepIndex]
   },
-
-  // 👉 NUEVO: actualizar un campo
-  updateField: (field, value) =>
-    set((state) => ({
-      formValues: {
-        ...state.formValues,
-        [field]: value,
-      },
-    })),
-
-  // 👉 NUEVO: limpiar formulario
-  resetForm: () => set({ formValues: {} }),
 }))

@@ -13,7 +13,7 @@ interface UseUploadHandlerProps {
 }
 
 export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
-  const { updateMiniStep, addApiResponse, steps } = useDocumentStore()
+  const { updateMiniStep, addApiResponse, steps,updateMainStep } = useDocumentStore()
 
   const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>, stepIdx: number, miniStepIdx: number) => {
@@ -51,7 +51,7 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
       }
 
       updateMiniStep(stepIdx, miniStepIdx, { uploading: true })
-
+      
       try {
         let apiResponse
 
@@ -78,6 +78,7 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
             completed: validation.isValid,
             validationStatus: validation.isValid ? "success" : "error",
             uploading: false,
+             data: apiResponse.data,
           })
           if (validation.isValid) {
             onMessage(`${miniStep.title} procesado correctamente`, "success")
@@ -91,6 +92,7 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
             completed: validation.isValid,
             validationStatus: validation.isValid ? "success" : "error",
             uploading: false,
+             data: apiResponse.data,
           })
           if (validation.isValid) {
             onMessage(`${miniStep.title} procesado correctamente`, "success")
@@ -104,6 +106,7 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
             completed: validation.isValid,
             validationStatus: validation.isValid ? "success" : "error",
             uploading: false,
+             data: apiResponse.data,
           })
           if (validation.isValid) {
             onMessage(`${miniStep.title} procesado correctamente`, "success")
@@ -114,11 +117,21 @@ export const useUploadHandler = ({ onMessage }: UseUploadHandlerProps) => {
             completed: true,
             validationStatus: "success",
             uploading: false,
+             data: apiResponse.data,   // <<< NUEVO
           })
           onMessage(`${miniStep.title} procesado correctamente`, "success")
         }
 
         addApiResponse(apiResponse)
+
+        const parentStep = steps[stepIdx]
+      const allMiniStepsOk = parentStep.miniSteps.every(
+        (ms) => ms.completed === true && ms.validationStatus === "success" && ms.data
+      )
+
+      if (allMiniStepsOk) {
+        updateMainStep(stepIdx, { completed: true })
+      }
       } catch (error) {
         console.log(error)
         updateMiniStep(stepIdx, miniStepIdx, {

@@ -1,6 +1,5 @@
 
 import { uploadKickOffAPI } from "../../infrastructure/api/document-upload.api"
-import { useDocumentStore } from "../../infrastructure/store/document-store"
 import type { UploadRequestDTO, UploadResponseDTO } from "../dto/upload-request.dto"
 
 export const uploadKickOffUseCase = async (request: UploadRequestDTO): Promise<UploadResponseDTO> => {

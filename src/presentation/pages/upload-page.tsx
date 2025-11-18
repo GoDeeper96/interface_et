@@ -16,6 +16,7 @@ import { KICKOFF_REQUIRED_FIELDS } from "../../domain/workflow/kickoff-fields"
 import { useDocumentStore } from "../../infrastructure/store/document-store"
 import { SILABUS_REQUIRED_FIELDS } from "../../application/services/validation/silabus-validator.service"
 import { BIBLIOGRAFIA_REQUIRED_FIELDS } from "../../application/services/validation/bibliografia-validator.service"
+import { useSchemaHandler } from "../hooks/schema-handler"
 type MessageIntent = "info" | "success" | "warning" | "error"
 const UploadPage: React.FC = () => {
   const [message, setMessage] = useState<{ text: string; type: MessageIntent } | null>(null)
@@ -42,8 +43,11 @@ const UploadPage: React.FC = () => {
     setTimeout(() => setMessage(null), 5000)
   }
   const [formValues, setFormValues] = useState<Record<string, string>>({})
-  
+  const { handleGenerateSchema } = useSchemaHandler({ onMessage: showMessage })
   const { handleFileSelect, handleUpload } = useUploadHandler({ onMessage: showMessage })
+  const schemaGenerated = useDocumentStore(state => state.schemaGenerated)
+
+  const currentStep = steps[currentStepIndex]
   const handleRequirementChange = (field: string, value: string) => {
   setFormValues((prev) => ({ ...prev, [field]: value }))
 }
@@ -124,40 +128,57 @@ const UploadPage: React.FC = () => {
           id:"step2",
           title:"Generar esquema de curso y actividades",
           description:"Archivos necesarios para generar un esquema de curso y actividades",
+          
           icon:<DocumentRegular/>,
-          miniSteps:[]
+          miniSteps:[{
+              id: "Esquema_unidad_actividades",
+              title: "Esquema de Unidad y Actividades",
+              description: "Revisar esquema de unidad y actividades",
+              allowedExtensions: [],
+              fileList: [],
+              completed: false,
+              uploading: false,
+              icon: <ClipboardTaskRegular />,
+              documentInfo: {
+                purpose: "Esquema de unidad y actividades",
+                requirements: ["Silabus", "Bibliografias", "Acta de traspaso de reunión"],
+                examples: ["Silabus_Curso_2024.docx", "Plan_Estudios.xlsx"],
+              },
+              validationStatus: "pending",
+              fieldValidations: [],
+              requiredFields: []
+            }]
         },
         {
           id:"step3",
           title:"Generar IPES",
           description:"Archivos necesarios para generar IPES",
           icon:<DocumentRegular/>,
-          miniSteps:[]
+          miniSteps:[{
+              id: "Ipes",
+              title: "IPES",
+              description: "Revisar IPES",
+              allowedExtensions: [],
+              fileList: [],
+              completed: false,
+              uploading: false,
+              icon: <ClipboardTaskRegular />,
+              documentInfo: {
+                purpose: "Esquema de unidad y actividades",
+                requirements: ["Silabus", "Bibliografias", "Acta de traspaso de reunión"],
+                examples: ["Silabus_Curso_2024.docx", "Plan_Estudios.xlsx"],
+              },
+              validationStatus: "pending",
+              fieldValidations: [],
+              requiredFields: []
+            }]
         },
       ]
       setSteps(initialSteps)
     }
   }, [steps.length, setSteps])
 
-  // 🟢 Autoavance solo una vez por validación exitosa
-  // useEffect(() => {
-  //   if (steps.length === 0) return
-
-  //   const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
-  //   const stepId = currentMiniStep?.id
-
-  //   if (
-  //     currentMiniStep?.validationStatus === "success" &&
-  //     stepId !== lastValidatedStep && // Evita repetir el avance
-  //     currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1
-  //   ) {
-  //     setLastValidatedStep(stepId)
-  //     const timer = setTimeout(() => {
-  //       setCurrentMiniStepIndex(currentMiniStepIndex + 1)
-  //     }, 1000)
-  //     return () => clearTimeout(timer)
-  //   }
-  // }, [steps, currentMiniStepIndex, currentStepIndex, setCurrentMiniStepIndex, lastValidatedStep])
+ 
   useEffect(() => {
   if (steps.length === 0) return
 
@@ -188,6 +209,24 @@ const UploadPage: React.FC = () => {
     return () => clearTimeout(timer)
   }
 }, [steps, currentMiniStepIndex, currentStepIndex, lastValidatedStep])
+useEffect(() => {
+  if (schemaGenerated) return
+  if (steps.length === 0) return
+
+  const step1 = steps[0]
+  const step2 = steps[1]
+
+  // Solo ejecutar si estamos en Step 2 / ministep 0
+  const isOnStep2 = currentStepIndex === 1 && currentMiniStepIndex === 0
+
+  // Validar si Step 1 está completamente correcto
+  const step1Completed = step1.miniSteps.every(ms => ms.validationStatus === "success")
+
+  // Evitar re-ejecución
+  if (isOnStep2 && step1Completed && step2.miniSteps[0].validationStatus === "pending") {
+    handleGenerateSchema(1, 0)   // stepIndex = 1, miniStepIndex = 0
+  }
+}, [schemaGenerated, currentStepIndex, currentMiniStepIndex])
   const completedMiniSteps = getCompletedMiniSteps()
   const totalMiniSteps = getTotalMiniSteps()
   const completedSteps = getCompletedSteps()
@@ -197,17 +236,7 @@ const UploadPage: React.FC = () => {
   console.log(currentMiniStep?.title)
   const apiResponse = apiData.find((item) => item.documentType === currentMiniStep?.title)
   console.log(apiResponse)
-  // const handlePrevious = () => {
-  //   if (currentMiniStepIndex > 0) {
-  //     setCurrentMiniStepIndex(currentMiniStepIndex - 1)
-  //   }
-  // }
 
-  // const handleNext = () => {
-  //   if (currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1) {
-  //     setCurrentMiniStepIndex(currentMiniStepIndex + 1)
-  //   }
-  // }
   const handleNext = () => {
   const currentStep = steps[currentStepIndex]
 
@@ -233,7 +262,11 @@ const handlePrevious = () => {
       setCurrentMiniStepIndex(index)
     }
   }
-
+  console.log(currentStep)
+  if(!currentStep)
+  { 
+    return (<div></div>)
+  }
   return (
     <FluentProvider theme={webLightTheme}>
       <div
@@ -261,9 +294,46 @@ const handlePrevious = () => {
             <MessageBarBody>{message.text}</MessageBarBody>
           </MessageBar>
         )}
-
+       
         {/* Upload Card - Left Column */}
-        {currentMiniStep && (
+        {currentStep.id === "step2" && currentMiniStep && (
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px",
+            background: "white",
+            padding: "24px",
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            minWidth: 0,
+          }}
+        >
+          <h2 style={{ margin: 0 }}>{currentMiniStep.title}</h2>
+          <p style={{ opacity: 0.8 }}>{currentMiniStep.description}</p>
+
+          {apiResponse ? (
+            <pre
+              style={{
+                background: "#f5f5f5",
+                padding: "16px",
+                borderRadius: "8px",
+                maxHeight: "65vh",
+                overflowY: "auto",
+                fontSize: "14px",
+              }}
+            >
+              {JSON.stringify(apiResponse, null, 2)}
+            </pre>
+          ) : (
+            <p style={{ fontStyle: "italic", opacity: 0.6 }}>
+              Aún no hay datos generados para este paso.
+            </p>
+          )}
+        </div>
+      )}
+        { currentStep.id==="step1"&&currentMiniStep && (
           <div style={{ width: "380px", display: "flex", flexDirection: "column" }}>
             <UploadCard
               miniStep={currentMiniStep}
@@ -274,7 +344,7 @@ const handlePrevious = () => {
         )}
 
         {/* Document Info Card - Center Column */}
-        {currentMiniStep && (
+        {currentStep.id==="step1"&&currentMiniStep && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
             <DocumentInfoCard
               miniStep={currentMiniStep}
@@ -285,7 +355,7 @@ const handlePrevious = () => {
             />
           </div>
         )}
-
+          
         {/* Progress Card - Right Column */}
         {steps.length > 0 && (
           <div style={{ width: "320px", display: "flex", flexDirection: "column" }}>

@@ -61,15 +61,41 @@ const handleUnlockField = (field: string) => {
   }));
 };
 
-const canGoNext =
-  currentMiniStep?.validationStatus === "success" &&
+const isLastMiniStep =
+  currentMiniStepIndex === steps[currentStepIndex].miniSteps.length - 1
+
+const areRequirementsComplete =
   Object.values(requirementData ?? {}).every((r) =>
     (formValues?.[r.field] ?? "").trim()
-  ) &&
-  currentMiniStepIndex < steps[currentStepIndex].miniSteps.length - 1
-  console.log(steps)
-  console.log(formValues)
-  console.log(requirementData)
+  )
+const getStepProgress = (step: MainStep) => {
+  const total = step.miniSteps.length
+  const completed = step.miniSteps.filter(s => s.validationStatus === "success").length
+  return { completed, total }
+}
+
+const getStepStatus = (step: MainStep) => {
+  const total = step.miniSteps.length
+  const completed = step.miniSteps.filter(s => s.validationStatus === "success").length
+  
+  if (completed === total) return "success"
+  if (completed > 0) return "pending"
+  return "pending"
+}
+const canGoNext =
+  // Si NO es el último miniStep → requiere validación success
+  (!isLastMiniStep &&
+    currentMiniStep?.validationStatus === "success" &&
+    areRequirementsComplete)
+  ||
+  // Si YA ES el último miniStep → permitir avanzar al siguiente paso
+  (isLastMiniStep &&
+  currentMiniStep?.validationStatus === "success" &&
+  areRequirementsComplete)
+    console.log(steps)
+  // console.log(steps)
+  // console.log(formValues)
+  // console.log(requirementData)
   return (
     <Card
       style={{
@@ -84,9 +110,47 @@ const canGoNext =
       <Title2 style={{ marginBottom: "16px", color: "#0078d4", flexShrink: 0 }}>Progreso</Title2>
 
       <Text weight="semibold" size={300} style={{ marginBottom: "12px", color: "#323130" }}>
-        Paso {currentStepIndex + 1}/{steps.length}
+        Pasos completados {currentStepIndex + 1}/{steps.length}
       </Text>
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
+      {steps.map((step, idx) => {
+        const { completed, total } = getStepProgress(step)
+        const status = getStepStatus(step)
 
+        return (
+          <div
+            key={step.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+            
+              gap: "8px",
+              padding: "4px 0",
+              opacity: idx === currentStepIndex ? 1 : 0.7,
+            }}
+          >
+            <div style={{ width: "20px",alignItems: "center",display:"flex" }}>
+              {getValidationIcon(status)}
+            </div>
+
+            <Text
+              size={200}
+              style={{
+                flex: 1,
+                color: idx === currentStepIndex ? "#0078d4" : "#323130",
+                fontWeight: idx === currentStepIndex ? 600 : 400,
+              }}
+            >
+              {step.title}
+            </Text>
+
+            <Text size={200} style={{ opacity: 0.6 }}>
+              {completed}/{total}
+            </Text>
+          </div>
+        )
+      })}
+    </div>
       <ProgressBar value={progressValue} max={100} style={{ marginBottom: "16px" }} />
       
         {requirementData && requirementData.length > 0 && (
