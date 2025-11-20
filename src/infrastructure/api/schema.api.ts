@@ -7,6 +7,8 @@ import type { SchemaPayload } from "../../application/payload/schema.request"
 
 
 export const generarSchemaAPI = async(payload:SchemaPayload):Promise<SchemaDTO>=>{
+  console.log(payload)
+  console.log("es el payload")
 const response = await axios.post(API_CONFIG.SCHEMA_URL, {
     silabus:payload.silabus,
     kickoff:payload.kickoff,
