@@ -6,6 +6,8 @@ export const generarSchemaUseCase = async (
   request: SchemaPayload
 ): Promise<SchemaDTO> => {
   try {
+    console.log("holaaa")
+    console.log(request)
     const response = await generarSchemaAPI(request)
 
     return {
