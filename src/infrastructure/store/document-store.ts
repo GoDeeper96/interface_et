@@ -14,12 +14,12 @@ interface DocumentStore {
   updateField: (field: string, value: string) => void
   resetForm: () => void
 
-  // Actualización de steps
+  // Steps
   setSteps: (steps: MainStep[]) => void
   updateMiniStep: (stepIdx: number, miniStepIdx: number, updates: Partial<MiniStep>) => void
   updateMainStep: (stepIdx: number, updates: Partial<MainStep>) => void
 
-  // Navegación entre steps
+  // Navegación
   setCurrentStepIndex: (index: number) => void
   setCurrentMiniStepIndex: (index: number) => void
 
@@ -29,7 +29,7 @@ interface DocumentStore {
   // Modal
   setIsModalOpen: (isOpen: boolean) => void
 
-  // Progreso global
+  // Progreso
   getCompletedMiniSteps: () => number
   getTotalMiniSteps: () => number
   getCompletedSteps: () => number
@@ -40,8 +40,16 @@ interface DocumentStore {
   setGeneratingSchema: (value: boolean) => void
 
   schemaGenerated: boolean
-  setSchemaGenerated: (val: boolean) => void
+  setSchemaGenerated: (value: boolean) => void
+
+  // Flags de generación de IPES
+  isGeneratingIpes: boolean
+  setGeneratingIpes: (value: boolean) => void
+
+  ipesGenerated: boolean
+  setIpesGenerated: (value: boolean) => void
 }
+
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   steps: [],
@@ -57,6 +65,12 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   schemaGenerated: false,
   setSchemaGenerated: (val) => set({ schemaGenerated: val }),
 
+    // ------- Flags del workflow de IPES -------
+  isGeneratingIpes: false,
+  setGeneratingIpes: (value) => set({ isGeneratingIpes: value }),
+
+  ipesGenerated: false,
+  setIpesGenerated: (val) => set({ ipesGenerated: val }),
   // Formulario
   formValues: {},
   updateField: (field, value) =>

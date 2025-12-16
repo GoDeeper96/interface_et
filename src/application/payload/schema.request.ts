@@ -5,5 +5,6 @@ import type { Silabus } from "../../domain/input/silabus";
 export interface SchemaPayload{
     silabus: Silabus
     bibliografia: Bibliografia[]
-    kickoff: KickOff
+    kickoff: KickOff,
+    cod_curso?:string
 }

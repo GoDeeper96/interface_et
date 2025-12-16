@@ -13,21 +13,21 @@ export const generarSchemaUseCase = async (
     return {
       success: true,
       message: "Esquema generado correctamente",
-      documentType: "Esquema",
+      documentType: "Esquema de Unidad y Actividades",
       filename: "-",           // puedes cambiarlo si deseas
       data: response,                    // response completo
       esquemaCurso: response.esquemaCurso,
-      esquemaActividades: response.esquemaActividades
+      esquemaActividad: response.esquemaActividad
     }
   } catch (error) {
     return {
       success: false,
       message: "Error al generar el esquema",
-      documentType: "Esquema",
+      documentType: "Esquema de Unidad y Actividades",
       filename: "-",
       data: {},
       esquemaCurso: {} as any,
-      esquemaActividades: {} as any,
+      esquemaActividad: {} as any,
       error: error instanceof Error ? error.message : "Error desconocido",
     }
   }

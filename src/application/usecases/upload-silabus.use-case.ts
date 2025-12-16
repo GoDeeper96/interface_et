@@ -1,6 +1,5 @@
 
 import { uploadSilabusAPI } from "../../infrastructure/api/document-upload.api"
-import { useDocumentStore } from "../../infrastructure/store/document-store"
 import type { UploadRequestDTO, UploadResponseDTO } from "../dto/upload-request.dto"
 
 export const uploadSilabusUseCase = async (request: UploadRequestDTO): Promise<UploadResponseDTO> => {
