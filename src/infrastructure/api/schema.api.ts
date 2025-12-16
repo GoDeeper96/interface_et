@@ -12,7 +12,8 @@ export const generarSchemaAPI = async(payload:SchemaPayload):Promise<SchemaDTO>=
 const response = await axios.post(API_CONFIG.SCHEMA_URL, {
     silabus:payload.silabus,
     kickoff:payload.kickoff,
-    bibliografia:payload.bibliografia
+    bibliografia:payload.bibliografia,
+    cod_curso:payload.cod_curso
   })
   console.log(response)
   return response.data

@@ -1,6 +1,6 @@
 import type React from "react"
 import type { FieldValidation } from "../base/validation-results"
-import type { SchemaDTO, SchemaDTO_Original } from "../../application/dto/schema.dto"
+import type {  SchemaDTO_Original } from "../../application/dto/schema.dto"
 
 
 export interface RequiredField {

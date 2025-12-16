@@ -46,6 +46,7 @@ export const useSchemaHandler = ({ onMessage }: UseSchemaHandlerProps) => {
           kickoff,
           bibliografia,
           silabus,
+          cod_curso: formValues.cod_curso,
         }
 
         // Enviar a la API

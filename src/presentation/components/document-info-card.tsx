@@ -13,7 +13,6 @@ import {
   Dialog,
   DialogSurface,
   DialogBody,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Table,
@@ -86,7 +85,7 @@ export const DocumentInfoCard: React.FC<DocumentInfoCardProps> = ({
     );}
     return (<>-</>)
   }
-  const renderValue = (value: any, key?: string, depth: number = 0): React.ReactNode => {
+  const renderValue = (value: any, depth: number = 0): React.ReactNode => {
   const paddingLeft = `${depth * 12}px`;
 
   // Valor primitivo
@@ -115,7 +114,7 @@ export const DocumentInfoCard: React.FC<DocumentInfoCardProps> = ({
             <AccordionHeader style={{ paddingLeft }}>
               <Text size={300}>Elemento {index + 1}</Text>
             </AccordionHeader>
-            <AccordionPanel>{renderValue(item, undefined, depth + 1)}</AccordionPanel>
+            <AccordionPanel>{renderValue(item, depth + 1)}</AccordionPanel>
           </AccordionItem>
         ))}
       </Accordion>
@@ -142,7 +141,7 @@ export const DocumentInfoCard: React.FC<DocumentInfoCardProps> = ({
               {key}
             </Text>
           </AccordionHeader>
-          <AccordionPanel>{renderValue(val, key, depth + 1)}</AccordionPanel>
+          <AccordionPanel>{renderValue(val, depth + 1)}</AccordionPanel>
         </AccordionItem>
       ))}
     </Accordion>

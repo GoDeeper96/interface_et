@@ -17,6 +17,10 @@ import { useDocumentStore } from "../../infrastructure/store/document-store"
 import { SILABUS_REQUIRED_FIELDS } from "../../application/services/validation/silabus-validator.service"
 import { BIBLIOGRAFIA_REQUIRED_FIELDS } from "../../application/services/validation/bibliografia-validator.service"
 import { useSchemaHandler } from "../hooks/schema-handler"
+import { useIpesHandler } from "../hooks/ipes-handler"
+import { EsquemaActividadesTable } from "../components/esquema-actividades"
+import { EsquemaTable } from "../components/esquema"
+import { FullScreenLoader } from "../components/loader"
 type MessageIntent = "info" | "success" | "warning" | "error"
 const UploadPage: React.FC = () => {
   const [message, setMessage] = useState<{ text: string; type: MessageIntent } | null>(null)
@@ -44,9 +48,10 @@ const UploadPage: React.FC = () => {
   }
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const { handleGenerateSchema } = useSchemaHandler({ onMessage: showMessage })
+  const { handleGenerateIpes } = useIpesHandler({ onMessage: showMessage })
   const { handleFileSelect, handleUpload } = useUploadHandler({ onMessage: showMessage })
   const schemaGenerated = useDocumentStore(state => state.schemaGenerated)
-
+  const ipesGenerated = useDocumentStore(state => state.ipesGenerated)
   const currentStep = steps[currentStepIndex]
   const handleRequirementChange = (field: string, value: string) => {
   setFormValues((prev) => ({ ...prev, [field]: value }))
@@ -164,8 +169,8 @@ const UploadPage: React.FC = () => {
               uploading: false,
               icon: <ClipboardTaskRegular />,
               documentInfo: {
-                purpose: "Esquema de unidad y actividades",
-                requirements: ["Silabus", "Bibliografias", "Acta de traspaso de reunión"],
+                purpose: "IPES",
+                requirements: ["Acta de traspaso de reunión","Esquema de unidad","Esquema de actividades"],
                 examples: ["Silabus_Curso_2024.docx", "Plan_Estudios.xlsx"],
               },
               validationStatus: "pending",
@@ -227,15 +232,46 @@ useEffect(() => {
     handleGenerateSchema(1, 0)   // stepIndex = 1, miniStepIndex = 0
   }
 }, [schemaGenerated, currentStepIndex, currentMiniStepIndex])
+  const retryGenerateIpes = async () => {
+  await handleGenerateIpes(2,0);
+};
+useEffect(() => {
+  if (ipesGenerated) return
+  if (steps.length === 0) return
+  // if (steps[2]?.miniSteps[0].validationStatus !== "pending") return
+
+  const step1 = steps[0]
+  const step2 = steps[1]
+  const step3 = steps[2]
+
+  // Ejecutar solo si estás en Step 3 / ministep 0
+  const isOnStep3 = currentStepIndex === 2 && currentMiniStepIndex === 0
+
+  if (!isOnStep3) return
+
+  // Validar Step 1 completamente OK
+  const step1Completed = step1.miniSteps.every(ms => ms.validationStatus === "success")
+
+  // Validar que Step 2 también esté completamente OK
+  const step2Completed = step2.miniSteps.every(ms => ms.validationStatus === "success")
+
+  // Si ambos pasos previos están completos y aún no generaste IPES → ejecuta
+  if (step1Completed && step2Completed && step3.miniSteps[0].validationStatus === "pending") {
+    console.log("Generando IPES automáticamente...")
+    handleGenerateIpes(2, 0)  // stepIndex = 2, miniStepIndex = 0
+  }
+
+}, [ipesGenerated, currentStepIndex, currentMiniStepIndex])
+
   const completedMiniSteps = getCompletedMiniSteps()
   const totalMiniSteps = getTotalMiniSteps()
   const completedSteps = getCompletedSteps()
 
   const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
-  console.log(apiData)
-  console.log(currentMiniStep?.title)
+  // console.log(apiData)
+  // console.log(currentMiniStep?.title)
   const apiResponse = apiData.find((item) => item.documentType === currentMiniStep?.title)
-  console.log(apiResponse)
+  // console.log(apiResponse)
 
   const handleNext = () => {
   const currentStep = steps[currentStepIndex]
@@ -294,45 +330,8 @@ const handlePrevious = () => {
             <MessageBarBody>{message.text}</MessageBarBody>
           </MessageBar>
         )}
-       
-        {/* Upload Card - Left Column */}
-        {currentStep.id === "step2" && currentMiniStep && (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            gap: "24px",
-            background: "white",
-            padding: "24px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-            minWidth: 0,
-          }}
-        >
-          <h2 style={{ margin: 0 }}>{currentMiniStep.title}</h2>
-          <p style={{ opacity: 0.8 }}>{currentMiniStep.description}</p>
 
-          {apiResponse ? (
-            <pre
-              style={{
-                background: "#f5f5f5",
-                padding: "16px",
-                borderRadius: "8px",
-                maxHeight: "65vh",
-                overflowY: "auto",
-                fontSize: "14px",
-              }}
-            >
-              {JSON.stringify(apiResponse, null, 2)}
-            </pre>
-          ) : (
-            <p style={{ fontStyle: "italic", opacity: 0.6 }}>
-              Aún no hay datos generados para este paso.
-            </p>
-          )}
-        </div>
-      )}
+    
         { currentStep.id==="step1"&&currentMiniStep && (
           <div style={{ width: "380px", display: "flex", flexDirection: "column" }}>
             <UploadCard
@@ -342,9 +341,89 @@ const handlePrevious = () => {
             />
           </div>
         )}
+        {currentStep.id==="step3" && currentMiniStep && (
+  <div
+    style={{
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      minWidth: 0,
+      padding: "20px",
+      minHeight: 0,
+    }}
+  >
+    {!apiResponse?.data ? (
+      <FullScreenLoader message= "Generando IPES...." />
+    ) : (
+      <div> holas </div>
+    )}
+  </div>   
+)}        
 
-        {/* Document Info Card - Center Column */}
-        {currentStep.id==="step1"&&currentMiniStep && (
+       
+      {currentStep.id === "step2" && currentMiniStep && (
+  <div
+    style={{
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      minWidth: 0,
+      padding: "20px",
+      minHeight: 0,
+    }}
+  >
+    {!apiResponse?.data ? (
+      <FullScreenLoader message="Generando Esquema..." />
+    ) : (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          gap: "24px",
+          minWidth: 0,
+          height: "100%",
+        }}
+      >
+        {/* CARD 1 - ESQUEMA CURSO */}
+        <div
+          style={{
+            flex: 1,
+            background: "white",
+            padding: "24px",
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            overflowY: "auto",
+            minWidth: 0,
+            maxHeight: "100%",
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>Esquema del Curso</h3>
+          <EsquemaTable esquemaCurso={apiResponse.data.esquemaCurso} />
+        </div>
+
+        {/* CARD 2 - ESQUEMA ACTIVIDADES */}
+        <div
+          style={{
+            flex: 1,
+            background: "white",
+            padding: "24px",
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            overflowY: "auto",
+            minWidth: 0,
+            maxHeight: "100%",
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>Esquema de Actividades</h3>
+          <EsquemaActividadesTable esquemaActividades={apiResponse.data.esquemaActividad} />
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+
+        {currentStep.id==="step1"&&currentMiniStep &&  (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
             <DocumentInfoCard
               miniStep={currentMiniStep}

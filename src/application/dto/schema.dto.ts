@@ -8,7 +8,7 @@ export interface SchemaDTO_Original {
 }
 export interface SchemaDTO extends ApiResponse {
   esquemaCurso: EsquemaCurso
-  esquemaActividades: EsquemaActividad
+  esquemaActividad: EsquemaActividad
   success: boolean
   error?: string
 }

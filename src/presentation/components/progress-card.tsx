@@ -1,11 +1,13 @@
 import type React from "react"
-import { Card, Button, Text, Title2, ProgressBar, Input, Label, Field } from "@fluentui/react-components"
-import { ArrowLeftRegular, ArrowRightRegular, CheckmarkCircleRegular, CheckmarkLock16Filled, CheckmarkLockRegular, LockClosedFilled } from "@fluentui/react-icons"
-import { CheckmarkCircleFilled, DismissCircleFilled, CircleFilled } from "@fluentui/react-icons"
+import { Card, Button, Text, Title2, ProgressBar, Input, Field } from "@fluentui/react-components"
+import { ArrowLeftRegular, ArrowRightRegular, CheckmarkCircleRegular, CheckmarkLockRegular } from "@fluentui/react-icons"
+import { CheckmarkCircleFilled, DismissCircleFilled, CircleFilled,ArrowClockwiseFilled } from "@fluentui/react-icons"
 import type { MainStep, RequirementData } from "../../domain/workflow/step"
 import { useState } from "react"
 import { useDocumentStore } from "../../infrastructure/store/document-store"
-
+import { useSchemaHandler } from "../hooks/schema-handler"
+import { useIpesHandler } from "../hooks/ipes-handler"
+type MessageIntent = "info" | "success" | "warning" | "error"
 interface ProgressCardProps {
   steps: MainStep[]
   currentStepIndex: number
@@ -34,6 +36,12 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
   onNextClick,
   onMiniStepSelect,
 }) => {
+    const [message, setMessage] = useState<{ text: string; type: MessageIntent } | null>(null)
+  
+  const showMessage = (text: string, type: MessageIntent) => {
+    setMessage({ text, type })
+    setTimeout(() => setMessage(null), 5000)
+  }
   const getValidationIcon = (status: "pending" | "error" | "success") => {
     switch (status) {
       case "success":
@@ -46,7 +54,8 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
     }
   }
   const { updateField } = useDocumentStore()
-
+    const { handleGenerateSchema } = useSchemaHandler({ onMessage: showMessage })
+    const { handleGenerateIpes } = useIpesHandler({ onMessage: showMessage })
   const progressValue = totalMiniSteps > 0 ? (completedMiniSteps / totalMiniSteps) * 100 : 0
   const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
 
@@ -81,6 +90,9 @@ const getStepStatus = (step: MainStep) => {
   if (completed === total) return "success"
   if (completed > 0) return "pending"
   return "pending"
+}
+const executeStep = (stepId, miniStepId)=>{
+  if(stepId==="step3") return handleGenerateIpes(2,0)
 }
 const canGoNext =
   // Si NO es el último miniStep → requiere validación success
@@ -243,6 +255,17 @@ const canGoNext =
                 {miniStep.description}
               </Text>
             </div>
+            <div>
+              <Button 
+              appearance="subtle" 
+              size="small" 
+              onClick={()=>{executeStep(steps[currentStepIndex].id,miniStep.id)}}
+              icon={<ArrowClockwiseFilled style={{ fontSize: "20px", color: "#888888ff" }}
+              />}/>
+
+              
+              {/* <ArrowClockwiseFilled style={{ fontSize: "20px", color: "#888888ff" }}/> */}
+            </div>
           </div>
         ))}
       </div>
@@ -251,7 +274,7 @@ const canGoNext =
         <Button
           icon={<ArrowLeftRegular />}
           onClick={onPreviousClick}
-          disabled={currentMiniStepIndex === 0}
+          // disabled={currentMiniStepIndex === 0||}
           style={{ flex: 1 }}
         >
           Anterior
