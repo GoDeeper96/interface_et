@@ -6,6 +6,8 @@ import type { IpesDTO } from "../../application/dto/ipes.dto"
 
 export const generarIpesAPI = async (payload: IpesPayload): Promise<IpesDTO> => {
     console.log("Payload IPES API: API", payload)
+ 
+  
   const response = await axios.post(API_CONFIG.IPES_URL, {
     esquema_curso: payload.esquema_curso,
     esquema_actividad: payload.esquema_actividad,
@@ -13,6 +15,7 @@ export const generarIpesAPI = async (payload: IpesPayload): Promise<IpesDTO> => 
     numero_unidad: payload.numero_unidad,
     numero_semana: payload.numero_semana
   })
+
 
   return response.data
 }
