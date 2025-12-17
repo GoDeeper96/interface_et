@@ -48,8 +48,20 @@ interface DocumentStore {
 
   ipesGenerated: boolean
   setIpesGenerated: (value: boolean) => void
-}
 
+  // Timing functionality for requests
+  requestTimings: Record<string, number>
+  setRequestTiming: (stepKey: string, duration: number) => void
+
+  // Loading state tracking per step
+  loadingSteps: Record<string, boolean>
+  setStepLoading: (stepKey: string, isLoading: boolean) => void
+
+  // Cancellation support
+  abortControllers: Record<string, AbortController>
+  setAbortController: (stepKey: string, controller: AbortController) => void
+  cancelStep: (stepKey: string) => void
+}
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   steps: [],
@@ -63,14 +75,64 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   setGeneratingSchema: (value) => set({ isGeneratingSchema: value }),
 
   schemaGenerated: false,
-  setSchemaGenerated: (val) => set({ schemaGenerated: val }),
+  setSchemaGenerated: (value) => set({ schemaGenerated: value }),
 
-    // ------- Flags del workflow de IPES -------
+  // ------- Flags del workflow de IPES -------
   isGeneratingIpes: false,
   setGeneratingIpes: (value) => set({ isGeneratingIpes: value }),
 
   ipesGenerated: false,
-  setIpesGenerated: (val) => set({ ipesGenerated: val }),
+  setIpesGenerated: (value) => set({ ipesGenerated: value }),
+
+  // Timing functionality for requests
+  requestTimings: {},
+  setRequestTiming: (stepKey, duration) =>
+    set((state) => ({
+      requestTimings: {
+        ...state.requestTimings,
+        [stepKey]: duration,
+      },
+    })),
+
+  // Loading state tracking per step
+  loadingSteps: {},
+  setStepLoading: (stepKey, isLoading) =>
+    set((state) => ({
+      loadingSteps: {
+        ...state.loadingSteps,
+        [stepKey]: isLoading,
+      },
+    })),
+
+  // Cancellation support
+  abortControllers: {},
+  setAbortController: (stepKey, controller) =>
+    set((state) => ({
+      abortControllers: {
+        ...state.abortControllers,
+        [stepKey]: controller,
+      },
+    })),
+
+  cancelStep: (stepKey) => {
+    const state = get()
+    const controller = state.abortControllers[stepKey]
+    if (controller) {
+      controller.abort()
+      set((state) => {
+        const newControllers = { ...state.abortControllers }
+        delete newControllers[stepKey]
+        return {
+          abortControllers: newControllers,
+          loadingSteps: {
+            ...state.loadingSteps,
+            [stepKey]: false,
+          },
+        }
+      })
+    }
+  },
+
   // Formulario
   formValues: {},
   updateField: (field, value) =>

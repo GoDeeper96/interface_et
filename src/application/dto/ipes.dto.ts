@@ -14,4 +14,5 @@ export interface IpesDTO extends ApiResponse {
     ejercicios: EjerciciosIPES
     success: boolean
     error?: string
+    timeRequest?:string
 }
