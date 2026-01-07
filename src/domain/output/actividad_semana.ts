@@ -6,6 +6,7 @@ export interface ActividadSemana{
     descripcion_actividad: string
     contexto: "Peruano" | "Internacional" | "No aplica"
     producto_evidencia: string
+    producto_subir_archivo: string
     formato_entrega: string
     logro_actividad:string
     instrumento:string

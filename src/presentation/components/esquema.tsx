@@ -1,24 +1,18 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  Button,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-} from "@fluentui/react-components"
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Button } from "@fluentui/react-components"
 import { exportEsquemaCursoToExcel } from "../utils/export-excel"
-import { ArrowDownload20Regular } from "@fluentui/react-icons"
+import { ArrowDownload20Regular, ChevronRight20Regular, ChevronDown20Regular } from "@fluentui/react-icons"
+
+interface ExpandedState {
+  unidades: Set<number>
+  semanas: Set<string>
+  temas: Set<string>
+  subtemas: Set<string>
+}
 
 export function EsquemaTable({
   esquemaCurso,
@@ -29,9 +23,13 @@ export function EsquemaTable({
   width: number
   onWidthChange: (width: number) => void
 }) {
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalTitle, setModalTitle] = useState("")
-  const [modalData, setModalData] = useState<any[]>([])
+  const [expanded, setExpanded] = useState<ExpandedState>({
+    unidades: new Set(),
+    semanas: new Set(),
+    temas: new Set(),
+    subtemas: new Set(),
+  })
+
   const [isResizing, setIsResizing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const startXRef = useRef(0)
@@ -77,14 +75,76 @@ export function EsquemaTable({
     }
   }, [isResizing, width, onWidthChange, isCollapsed])
 
-  const openModal = (title: string, data: any[]) => {
-    setModalTitle(title)
-    setModalData(data)
-    setModalOpen(true)
+  const toggleUnidad = (unidadNum: number) => {
+    setExpanded((prev) => {
+      const newUnidades = new Set(prev.unidades)
+      if (newUnidades.has(unidadNum)) {
+        newUnidades.delete(unidadNum)
+      } else {
+        newUnidades.add(unidadNum)
+      }
+      return { ...prev, unidades: newUnidades }
+    })
+  }
+
+  const toggleSemana = (key: string) => {
+    setExpanded((prev) => {
+      const newSemanas = new Set(prev.semanas)
+      if (newSemanas.has(key)) {
+        newSemanas.delete(key)
+      } else {
+        newSemanas.add(key)
+      }
+      return { ...prev, semanas: newSemanas }
+    })
+  }
+
+  const toggleTema = (key: string) => {
+    setExpanded((prev) => {
+      const newTemas = new Set(prev.temas)
+      if (newTemas.has(key)) {
+        newTemas.delete(key)
+      } else {
+        newTemas.add(key)
+      }
+      return { ...prev, temas: newTemas }
+    })
+  }
+
+  const toggleSubtema = (key: string) => {
+    setExpanded((prev) => {
+      const newSubtemas = new Set(prev.subtemas)
+      if (newSubtemas.has(key)) {
+        newSubtemas.delete(key)
+      } else {
+        newSubtemas.add(key)
+      }
+      return { ...prev, subtemas: newSubtemas }
+    })
   }
 
   const handleExport = () => {
     exportEsquemaCursoToExcel(esquemaCurso)
+  }
+
+  if (!esquemaCurso || !esquemaCurso.esquemas_unidad) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          background: "white",
+          padding: "40px",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginLeft: "8px",
+        }}
+      >
+        <p style={{ color: "#666", fontSize: "14px" }}>Cargando esquema del curso...</p>
+      </div>
+    )
   }
 
   return (
@@ -164,169 +224,208 @@ export function EsquemaTable({
           </div>
         </div>
       ) : (
-        <div
+        <
+        
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              padding: "12px 8px 12px 16px",
+              background: "white",
+              borderBottom: "1px solid #e0e0e0",
+              position: "sticky",
+              top: 0,
+              zIndex: 5,
+            }}
+          >
+            <Button appearance="transparent" style={{ background: "#107c10", color: "white" }} icon={<ArrowDownload20Regular />} onClick={handleExport}>
+              Exportar a Excel
+            </Button>
+          </div>
+            <div
           style={{
             flex: 1,
             overflowY: "auto",
             paddingLeft: "8px",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px", paddingRight: "8px" }}>
-            <Button appearance="primary" size="small" icon={<ArrowDownload20Regular />} onClick={handleExport}>
-              Exportar a Excel
-            </Button>
-          </div>
-
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell>Unidad</TableHeaderCell>
-                <TableHeaderCell>Título</TableHeaderCell>
-                <TableHeaderCell>Logro</TableHeaderCell>
-                <TableHeaderCell>Semanas</TableHeaderCell>
+                <TableHeaderCell style={{ width: "40px" }}></TableHeaderCell>
+                <TableHeaderCell>Nivel</TableHeaderCell>
+                <TableHeaderCell>Descripción</TableHeaderCell>
+                <TableHeaderCell>Logro de Aprendizaje</TableHeaderCell>
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {esquemaCurso.esquemas_unidad.map((unidad: any) => (
-                <TableRow key={unidad.numero_unidad}>
-                  <TableCell>{unidad.numero_unidad}</TableCell>
-                  <TableCell>{unidad.titulo_unidad}</TableCell>
-                  <TableCell>{unidad.logro_de_aprendizaje_unidad}</TableCell>
-                  <TableCell>
-                    <Button
-                      appearance="primary"
-                      onClick={() => openModal(`Semanas de Unidad ${unidad.numero_unidad}`, unidad.semanas)}
-                    >
-                      Ver semanas
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {esquemaCurso.esquemas_unidad.map((unidad: any) => {
+                const unidadKey = unidad.numero_unidad
+                const isUnidadExpanded = expanded.unidades.has(unidadKey)
+
+                return (
+                  <React.Fragment key={`unidad-${unidadKey}`}>
+                    {/* Fila de Unidad */}
+                    <TableRow style={{ background: "#f5f5f5" }}>
+                      <TableCell>
+                        <Button
+                          appearance="subtle"
+                          size="small"
+                          icon={isUnidadExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                          onClick={() => toggleUnidad(unidadKey)}
+                        />
+                      </TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>Unidad {unidad.numero_unidad}</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>{unidad.titulo_unidad}</TableCell>
+                      <TableCell>{unidad.logro_de_aprendizaje_unidad}</TableCell>
+                    </TableRow>
+
+                    {/* Semanas dentro de la Unidad */}
+                    {isUnidadExpanded &&
+                      unidad.semanas?.map((semana: any) => {
+                        const semanaKey = `${unidadKey}-${semana.numero_semana}`
+                        const isSemanaExpanded = expanded.semanas.has(semanaKey)
+
+                        return (
+                          <React.Fragment key={`semana-${semanaKey}`}>
+                            {/* Fila de Semana */}
+                            <TableRow style={{ background: "#fafafa" }}>
+                              <TableCell style={{ paddingLeft: "24px" }}>
+                                <Button
+                                  appearance="subtle"
+                                  size="small"
+                                  icon={isSemanaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                                  onClick={() => toggleSemana(semanaKey)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                Semana {semana.numero_semana} - {semana.nombre_de_la_sesion}
+                              </TableCell>
+                              <TableCell>{semana.nombre_de_la_sesion}</TableCell>
+                              <TableCell>{semana.logro_de_aprendizaje_semana}</TableCell>
+                            </TableRow>
+
+                            {/* Temas dentro de la Semana */}
+                            {isSemanaExpanded &&
+                              semana.temas?.map((tema: any, temaIdx: number) => {
+                                const temaKey = `${semanaKey}-tema-${temaIdx}`
+                                const isTemaExpanded = expanded.temas.has(temaKey)
+                                const hasSubtemas = tema.subtemas && tema.subtemas.length > 0
+
+                                return (
+                                  <React.Fragment key={`tema-${temaKey}`}>
+                                    <TableRow
+                                      style={{
+                                        background: "white",
+                                        cursor: hasSubtemas ? "pointer" : "default",
+                                      }}
+                                      onClick={hasSubtemas ? () => toggleTema(temaKey) : undefined}
+                                      onMouseEnter={(e) => {
+                                        if (hasSubtemas) {
+                                          e.currentTarget.style.background = "#f0f0f0"
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = "white"
+                                      }}
+                                    >
+                                      <TableCell style={{ paddingLeft: "40px" }}>
+                                        {hasSubtemas && (
+                                          <Button
+                                            appearance="subtle"
+                                            size="small"
+                                            icon={isTemaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              toggleTema(temaKey)
+                                            }}
+                                          />
+                                        )}
+                                      </TableCell>
+                                      <TableCell>Tema</TableCell>
+                                      <TableCell>{tema.titulo_tema}</TableCell>
+                                      <TableCell>{tema.logro_de_aprendizaje_tema}</TableCell>
+                                    </TableRow>
+
+                                    {/* Subtemas dentro del Tema */}
+                                    {isTemaExpanded &&
+                                      tema.subtemas?.map((subtema: any, subIdx: number) => {
+                                        const subtemaKey = `${temaKey}-subtema-${subIdx}`
+                                        const isSubtemaExpanded = expanded.subtemas.has(subtemaKey)
+                                        const hasApartados = subtema.apartados && subtema.apartados.length > 0
+
+                                        return (
+                                          <React.Fragment key={`subtema-${subtemaKey}`}>
+                                            <TableRow
+                                              style={{
+                                                background: "#fcfcfc",
+                                                cursor: hasApartados ? "pointer" : "default",
+                                              }}
+                                              onClick={hasApartados ? () => toggleSubtema(subtemaKey) : undefined}
+                                              onMouseEnter={(e) => {
+                                                if (hasApartados) {
+                                                  e.currentTarget.style.background = "#e8e8e8"
+                                                }
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "#fcfcfc"
+                                              }}
+                                            >
+                                              <TableCell style={{ paddingLeft: "50px" }}>
+                                                {hasApartados && (
+                                                  <Button
+                                                    appearance="subtle"
+                                                    size="small"
+                                                    icon={
+                                                      isSubtemaExpanded ? (
+                                                        <ChevronDown20Regular />
+                                                      ) : (
+                                                        <ChevronRight20Regular />
+                                                      )
+                                                    }
+                                                    onClick={(e) => {
+                                                      e.stopPropagation()
+                                                      toggleSubtema(subtemaKey)
+                                                    }}
+                                                  />
+                                                )}
+                                              </TableCell>
+                                              <TableCell style={{ paddingLeft: "16px" }}>Subtema</TableCell>
+                                              <TableCell>{subtema.titulo_subtema}</TableCell>
+                                              <TableCell>{subtema.logro_de_aprendizaje_subtema}</TableCell>
+                                            </TableRow>
+
+                                            {/* Apartados dentro del Subtema */}
+                                            {isSubtemaExpanded &&
+                                              subtema.apartados?.map((apartado: string, apIdx: number) => (
+                                                <TableRow
+                                                  key={`apartado-${subtemaKey}-${apIdx}`}
+                                                  style={{ background: "white" }}
+                                                >
+                                                  <TableCell style={{ paddingLeft: "96px" }}></TableCell>
+                                                  <TableCell style={{ paddingLeft: "32px" }}>Apartado</TableCell>
+                                                  <TableCell colSpan={2}>{apartado}</TableCell>
+                                                </TableRow>
+                                              ))}
+                                          </React.Fragment>
+                                        )
+                                      })}
+                                  </React.Fragment>
+                                )
+                              })}
+                          </React.Fragment>
+                        )
+                      })}
+                  </React.Fragment>
+                )
+              })}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </>
       )}
-
-      <Dialog open={modalOpen} onOpenChange={(_, data) => setModalOpen(data.open)}>
-        <DialogSurface>
-          <DialogBody>
-            <DialogTitle>{modalTitle}</DialogTitle>
-            <DialogContent style={{ marginTop: "16px" }}>
-              {"numero_semana" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Semana</TableHeaderCell>
-                      <TableHeaderCell>Sesión</TableHeaderCell>
-                      <TableHeaderCell>Logro</TableHeaderCell>
-                      <TableHeaderCell>Temas</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {modalData.map((semana: any) => (
-                      <TableRow key={semana.numero_semana}>
-                        <TableCell>{semana.numero_semana}</TableCell>
-                        <TableCell>{semana.nombre_de_la_sesion}</TableCell>
-                        <TableCell>{semana.logro_de_aprendizaje_semana}</TableCell>
-                        <TableCell>
-                          <Button
-                            appearance="secondary"
-                            onClick={() => openModal(`Temas - Semana ${semana.numero_semana}`, semana.temas)}
-                          >
-                            Ver temas
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {"titulo_tema" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Tema</TableHeaderCell>
-                      <TableHeaderCell>Logro</TableHeaderCell>
-                      <TableHeaderCell>Subtemas</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {modalData.map((tema: any) => (
-                      <TableRow key={tema.titulo_tema}>
-                        <TableCell>{tema.titulo_tema}</TableCell>
-                        <TableCell>{tema.logro_de_aprendizaje_tema}</TableCell>
-                        <TableCell>
-                          <Button
-                            appearance="secondary"
-                            onClick={() => openModal(`Subtemas de ${tema.titulo_tema}`, tema.subtemas)}
-                          >
-                            Ver subtemas
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {"titulo_subtema" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Subtema</TableHeaderCell>
-                      <TableHeaderCell>Logro</TableHeaderCell>
-                      <TableHeaderCell>Apartados</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {modalData.map((sub: any) => (
-                      <TableRow key={sub.titulo_subtema}>
-                        <TableCell>{sub.titulo_subtema}</TableCell>
-                        <TableCell>{sub.logro_de_aprendizaje_subtema}</TableCell>
-                        <TableCell>
-                          <Button
-                            appearance="secondary"
-                            onClick={() =>
-                              openModal(
-                                `Apartados de ${sub.titulo_subtema}`,
-                                sub.apartados.map((a: string) => ({ apartado: a })),
-                              )
-                            }
-                          >
-                            Ver apartados
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {"apartado" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Apartado</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {modalData.map((ap) => (
-                      <TableRow key={ap.apartado}>
-                        <TableCell>{ap.apartado}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </DialogContent>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
     </div>
   )
 }

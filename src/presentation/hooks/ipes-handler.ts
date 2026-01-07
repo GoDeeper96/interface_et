@@ -28,6 +28,10 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
       // Validación básica
       if (!formValues?.cod_curso) {
         onMessage("Falta cod_curso para generar IPES", "error")
+        updateMiniStep(stepIdx, miniStepIdx, {
+          uploading: false,
+          validationStatus: "error",
+        })
         return
       }
 
@@ -43,7 +47,11 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
       setGeneratingIpes(true)
       setIpesGenerated(false)
 
-      updateMiniStep(stepIdx, miniStepIdx, { uploading: true, validationStatus: "pending" })
+      updateMiniStep(stepIdx, miniStepIdx, {
+        uploading: true,
+        validationStatus: "pending",
+        completed: false,
+      })
 
       try {
         const esquemaCurso = steps[1].miniSteps[0].data.esquemaCurso

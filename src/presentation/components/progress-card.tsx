@@ -155,6 +155,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
 
   const executeStep = (stepId, miniStepId) => {
     if (stepId === "step3") return handleGenerateIpes(2, 0)
+    if (stepId === "step2") return handleGenerateSchema(1,0)
   }
 
   const canGoNext =

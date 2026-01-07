@@ -44,7 +44,7 @@ export function EsquemaActividadesTable({
   const [isCollapsed, setIsCollapsed] = useState(false)
   const startXRef = useRef(0)
   const startWidthRef = useRef(0)
-
+console.log(esquemaActividades)
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
@@ -211,13 +211,21 @@ export function EsquemaActividadesTable({
         >
           <div
             style={{
+              position: "sticky",
+              top: 0,
+              background: "white",
+              zIndex: 5,
+              paddingBottom: "12px",
+              borderBottom: "1px solid #e0e0e0",
+              marginBottom: "12px",
               display: "flex",
               justifyContent: "flex-end",
-              marginBottom: "12px",
+              paddingRight: "8px",
             }}
           >
             <Button
-              appearance="subtle"
+              appearance="transparent"
+              style={{ background: "#107c10", color: "white" }}
               icon={<ArrowDownload24Regular />}
               onClick={() => exportEsquemaActividadesToExcel(esquemaActividades)}
             >
@@ -246,7 +254,8 @@ export function EsquemaActividadesTable({
               </TableHeader>
 
               <TableBody>
-                {esquemaActividades.actividades.map((act: any, index: number) => (
+                {(esquemaActividades?.actividades ?? []).map((act: any, index: number) => (
+                  
                   <TableRow key={index}>
                     <TableCell>{act.numero_semana}</TableCell>
                     <TableCell>{act.codigo_actividad}</TableCell>
@@ -256,7 +265,11 @@ export function EsquemaActividadesTable({
                     <TableCell>{act.formato_entrega}</TableCell>
                     <TableCell>{act.instrumento}</TableCell>
                     <TableCell>{act.flexible}</TableCell>
-                    <TableCell>{act.producto_evidencia}</TableCell>
+                   <TableCell>
+                  {act.producto_evidencia &&act.producto_evidencia.includes("Subir archivo")
+                    ? `Subir archivo (${act.producto_subir_archivo})`
+                    : act.producto_evidencia}
+                </TableCell>
                     <TableCell>{act.contexto}</TableCell>
                     <Tooltip withArrow appearance="inverted" content={act.logro_actividad} relationship="label">
                       <TableCell>
@@ -343,7 +356,11 @@ export function EsquemaActividadesTable({
                 <span>{modalData.flexible}</span>
 
                 <strong>Producto</strong>
-                <span>{modalData.producto_evidencia}</span>
+                <span>
+                  {modalData.producto_evidencia && modalData.producto_evidencia.includes("Subir archivo")
+                    ? `Subir archivo (${modalData.producto_subir_archivo})`
+                    : modalData.producto_evidencia}
+                </span>
 
                 <strong>Contexto</strong>
                 <span>{modalData.contexto}</span>

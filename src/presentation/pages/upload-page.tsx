@@ -15,6 +15,7 @@ import { IpesTable } from "../components/ipes-table"
 import { useSchemaHandler } from "../hooks/schema-handler"
 import { useIpesHandler } from "../hooks/ipes-handler"
 import { useUploadHandler } from "../hooks/use-upload-handler"
+import { Button } from "@fluentui/react-components"
 
 const UploadPage: React.FC = () => {
   const [message, setMessage] = useState<{ text: string; type: string } | null>(null)
@@ -47,6 +48,8 @@ const UploadPage: React.FC = () => {
   const getCompletedMiniSteps = useDocumentStore((state) => state.getCompletedMiniSteps)
   const getTotalMiniSteps = useDocumentStore((state) => state.getTotalMiniSteps)
   const getCompletedSteps = useDocumentStore((state) => state.getCompletedSteps)
+  // const updateMiniStep = useDocumentStore((state) => state.updateMiniStep)
+  // const setApiData = useDocumentStore((state) => state.setApiData)
 
   const currentStep = steps[currentStepIndex]
   const currentMiniStep = currentStep?.miniSteps[currentMiniStepIndex]
@@ -271,7 +274,10 @@ const UploadPage: React.FC = () => {
       })
     }
   }, [ipesGenerated, currentStepIndex, currentMiniStepIndex, steps])
-
+    const executeStep = (stepId, miniStepId) => {
+      if (stepId === "step3") return handleGenerateIpes(2, 0)
+      if (stepId === "step2") return handleGenerateSchema(1,0)
+    }
   const handleNext = () => {
     if (currentMiniStepIndex < currentStep.miniSteps.length - 1) {
       setCurrentMiniStepIndex(currentMiniStepIndex + 1)
@@ -338,7 +344,45 @@ const UploadPage: React.FC = () => {
       setStep2BottomCollapsed(false)
     }
   }
+  //   const handleRetrySchema = async () => {
+  //   console.log("[v0] handleRetrySchema called")
+  //   schemaRequestInProgress.current = false
 
+  //   const step2Key = `step2_mini0`
+  //   setApiData(step2Key, null)
+  //   setLoadingSteps((prev) => ({ ...prev, [step2Key]: true }))
+
+  //   const currentStep = steps[1]
+  //   const currentMiniStep = currentStep?.miniSteps[0]
+  //   if (currentMiniStep) {
+  //     currentMiniStep.validationStatus = "pending"
+  //     currentMiniStep.uploading = true
+  //     setSteps([...steps])
+  //   }
+
+  //   await handleGenerateSchema()
+  // }
+
+  // const handleRetryIpes = async () => {
+  //   // Reset the loading state and validation status
+  //   const stepKey = `step3_mini0`
+  //   ipesRequestInProgress.current = true
+  //   setLoadingSteps((prev) => ({ ...prev, [stepKey]: true }))
+
+  //   // Reset validation status to pending to show loader
+  //   updateMiniStep(2, 0, {
+  //     validationStatus: "pending",
+  //     uploading: true,
+  //     completed: false,
+  //   })
+
+  //   try {
+  //     await handleGenerateIpes(2, 0)
+  //   } finally {
+  //     ipesRequestInProgress.current = false
+  //     setLoadingSteps((prev) => ({ ...prev, [stepKey]: false }))
+  //   }
+  // }
   const renderStepContent = () => {
     const currentStep = steps[currentStepIndex]
     const currentMiniStep = currentStep?.miniSteps[currentMiniStepIndex]
@@ -392,21 +436,12 @@ const UploadPage: React.FC = () => {
             <p style={{ color: "#666", marginBottom: "24px" }}>
               Hubo un problema al procesar la solicitud. Por favor, intenta nuevamente.
             </p>
-            <button
-              onClick={() => handleGenerateSchema(1, 0)}
-              style={{
-                padding: "12px 24px",
-                background: "#0f548c",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
+            <Button
+              onClick={() => executeStep("step2", 1)}
+              appearance="primary"
             >
               Reintentar
-            </button>
+            </Button>
           </div>
         )
       }
@@ -471,7 +506,7 @@ const UploadPage: React.FC = () => {
                 <h4 style={{ margin: 0, color: "#0078d4", fontSize: "14px" }}>Esquema del Curso</h4>
               </div>
             ) : (
-              <EsquemaTable data={esquemaCurso} />
+              <EsquemaTable esquemaCurso={esquemaCurso} />
             )}
           </div>
 
@@ -538,7 +573,7 @@ const UploadPage: React.FC = () => {
                 <h4 style={{ margin: 0, color: "#0078d4", fontSize: "14px" }}>Esquema de Actividades</h4>
               </div>
             ) : (
-              <EsquemaActividadesTable data={esquemaActividad} />
+              <EsquemaActividadesTable esquemaActividades={esquemaActividad} />
             )}
           </div>
         </div>
@@ -575,21 +610,15 @@ const UploadPage: React.FC = () => {
             <p style={{ color: "#666", marginBottom: "24px" }}>
               Hubo un problema al procesar la solicitud. Por favor, intenta nuevamente.
             </p>
-            <button
-              onClick={() => handleGenerateIpes(2, 0)}
-              style={{
-                padding: "12px 24px",
-                background: "#0f548c",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
+            <Button
+              onClick={() => 
+                executeStep("step3", 1)
+
+              }
+              appearance="primary"
             >
               Reintentar
-            </button>
+            </Button>
           </div>
         )
       }
@@ -692,21 +721,12 @@ const UploadPage: React.FC = () => {
               <p style={{ color: "#666", marginBottom: "24px" }}>
                 Hubo un problema al procesar la solicitud. Por favor, intenta nuevamente.
               </p>
-              <button
-                onClick={() => handleGenerateIpes(2, 0)}
-                style={{
-                  padding: "12px 24px",
-                  background: "#0f548c",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
+              <Button
+              appearance="primary"
+                onClick={() => executeStep("step3", 1)}
               >
                 Reintentar
-              </button>
+              </Button>
             </div>
           ) : apiResponse?.data ? (
             <div
@@ -769,21 +789,12 @@ const UploadPage: React.FC = () => {
               <p style={{ color: "#666", marginBottom: "24px" }}>
                 Hubo un problema al procesar la solicitud. Por favor, intenta nuevamente.
               </p>
-              <button
-                onClick={() => handleGenerateSchema(1, 0)}
-                style={{
-                  padding: "12px 24px",
-                  background: "#0f548c",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
+              <Button
+                onClick={() => executeStep("step2", 1)}
+              appearance="primary"
               >
                 Reintentar
-              </button>
+              </Button>
             </div>
           ) : apiResponse?.data ? (
             <div
@@ -840,15 +851,9 @@ const UploadPage: React.FC = () => {
                 </div>
 
                 {!isTopTableCollapsed && (
-                  <div
-                    style={{
-                      padding: "16px 20px",
-                      overflowY: "auto",
-                      flex: 1,
-                    }}
-                  >
+                  
                     <EsquemaTable esquemaCurso={apiResponse.data.esquemaCurso} />
-                  </div>
+             
                 )}
               </div>
 

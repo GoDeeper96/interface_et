@@ -76,6 +76,10 @@ export function exportIpesToExcel(ipes: any[]) {
       Subtemas: Array.isArray(ipe.ejercicios.subtemas) ? ipe.ejercicios.subtemas.join(", ") : "",
       "Código Actividad": ipe.ejercicios.codigo_actividad,
       "Tipo Actividad": ipe.ejercicios.tipo_actividad,
+      "Propósito Actividad": ipe.ejercicios.proposito_actividad || "N/A",
+      "Detalle Actividad": Array.isArray(ipe.ejercicios.detalle_actividad)
+        ? ipe.ejercicios.detalle_actividad.join(" | ")
+        : ipe.ejercicios.detalle_actividad || "N/A",
     }))
 
   if (ejerciciosData.length > 0) {
@@ -88,9 +92,18 @@ export function exportIpesToExcel(ipes: any[]) {
     const presentacionesSummary = ipe.presentaciones
       ?.map((p: any, idx: number) => `[P${idx + 1}] ${p.tema} - ${p.subtema}`)
       .join(" | ")
-    const ejerciciosSummary = ipe.ejercicios
-      ? `${ipe.ejercicios.tema} (${ipe.ejercicios.codigo_actividad})`
+
+    const ejerciciosDetalle = ipe.ejercicios
+      ? `${ipe.ejercicios.tema} (${ipe.ejercicios.codigo_actividad}) - ${ipe.ejercicios.tipo_actividad}`
       : "Sin ejercicios"
+
+    const ejerciciosProposito = ipe.ejercicios?.proposito_actividad || "N/A"
+
+    const ejerciciosDetalleActividad = ipe.ejercicios?.detalle_actividad
+      ? Array.isArray(ipe.ejercicios.detalle_actividad)
+        ? ipe.ejercicios.detalle_actividad.join(" | ")
+        : ipe.ejercicios.detalle_actividad
+      : "N/A"
 
     return {
       Unidad: ipe.unidad,
@@ -100,11 +113,21 @@ export function exportIpesToExcel(ipes: any[]) {
       "Logro Semana": ipe.introduccion?.logro_de_la_semana || "N/A",
       "Importancia Logro": ipe.introduccion?.importancia_del_logro || "N/A",
       "Situación Inicial": ipe.introduccion?.situacion_inicial || "N/A",
+      "Propósito SI": ipe.introduccion?.proposito_de_la_si || "N/A",
       "Pregunta Cuestionadora": ipe.introduccion?.pregunta_cuestionadora || "N/A",
       "Tipo Recurso Intro": ipe.introduccion?.tipo_recurso || "N/A",
       "Tiempo Intro (min)": ipe.introduccion?.tiempo_estimado || "N/A",
       "Presentaciones (resumen)": presentacionesSummary || "Sin presentaciones",
-      "Ejercicios (resumen)": ejerciciosSummary,
+      "Ejercicios Tema": ipe.ejercicios?.tema || "N/A",
+      "Ejercicios Subtemas": ipe.ejercicios?.subtemas
+        ? Array.isArray(ipe.ejercicios.subtemas)
+          ? ipe.ejercicios.subtemas.join(", ")
+          : ipe.ejercicios.subtemas
+        : "N/A",
+      "Ejercicios Código": ipe.ejercicios?.codigo_actividad || "N/A",
+      "Ejercicios Tipo": ipe.ejercicios?.tipo_actividad || "N/A",
+      "Ejercicios Propósito": ejerciciosProposito,
+      "Ejercicios Detalle": ejerciciosDetalleActividad,
     }
   })
 
