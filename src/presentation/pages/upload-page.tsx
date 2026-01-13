@@ -86,6 +86,7 @@ const UploadPage: React.FC = () => {
               id: "cc1",
               label: "Codigo del curso",
               type: "input",
+              // type:"combo_box"
             },
           ],
           icon: <DocumentRegular />,
@@ -671,6 +672,7 @@ const UploadPage: React.FC = () => {
         fontFamily: "Segoe UI, system-ui, sans-serif",
       }}
     >
+     
       {message && (
         <div
           style={{

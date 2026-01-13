@@ -3,15 +3,37 @@
 import React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Button } from "@fluentui/react-components"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+  Button,
+  Input,
+} from "@fluentui/react-components"
 import { exportEsquemaCursoToExcel } from "../utils/export-excel"
-import { ArrowDownload20Regular, ChevronRight20Regular, ChevronDown20Regular } from "@fluentui/react-icons"
+import {
+  ArrowDownload20Regular,
+  ChevronRight20Regular,
+  ChevronDown20Regular,
+  Edit20Regular,
+  Save20Regular,
+  Dismiss20Regular,
+} from "@fluentui/react-icons"
+import { useDocumentStore } from "../../infrastructure/store/document-store"
 
 interface ExpandedState {
   unidades: Set<number>
   semanas: Set<string>
   temas: Set<string>
   subtemas: Set<string>
+}
+
+interface EditingCell {
+  path: string // e.g., "unidad-0-titulo_unidad"
+  value: string
 }
 
 export function EsquemaTable({
@@ -29,6 +51,17 @@ export function EsquemaTable({
     temas: new Set(),
     subtemas: new Set(),
   })
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
+  const [localEsquema, setLocalEsquema] = useState<any>(null)
+  const updateEsquemaCurso = useDocumentStore((state) => state.updateEsquemaCurso)
+
+  useEffect(() => {
+    if (esquemaCurso) {
+      setLocalEsquema(JSON.parse(JSON.stringify(esquemaCurso)))
+    }
+  }, [esquemaCurso])
 
   const [isResizing, setIsResizing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -123,8 +156,128 @@ export function EsquemaTable({
     })
   }
 
+  const handleStartEdit = (path: string, currentValue: string) => {
+    if (!isEditing) return
+    setEditingCell({ path, value: currentValue })
+  }
+
+  const handleCellChange = (value: string) => {
+    if (editingCell) {
+      setEditingCell({ ...editingCell, value })
+    }
+  }
+
+  const handleCellBlur = () => {
+    if (editingCell && localEsquema) {
+      const pathParts = editingCell.path.split("-")
+      const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+
+      if (pathParts[0] === "unidad") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const field = pathParts[2]
+        newEsquema.esquemas_unidad[unidadIdx][field] = editingCell.value
+      } else if (pathParts[0] === "semana") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const field = pathParts[3]
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx][field] = editingCell.value
+      } else if (pathParts[0] === "tema") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const temaIdx = Number.parseInt(pathParts[3])
+        const field = pathParts[4]
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx][field] = editingCell.value
+      } else if (pathParts[0] === "subtema") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const temaIdx = Number.parseInt(pathParts[3])
+        const subtemaIdx = Number.parseInt(pathParts[4])
+        const field = pathParts[5]
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas[subtemaIdx][field] =
+          editingCell.value
+      } else if (pathParts[0] === "apartado") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const temaIdx = Number.parseInt(pathParts[3])
+        const subtemaIdx = Number.parseInt(pathParts[4])
+        const apartadoIdx = Number.parseInt(pathParts[5])
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas[subtemaIdx].apartados[
+          apartadoIdx
+        ] = editingCell.value
+      }
+
+      setLocalEsquema(newEsquema)
+      setEditingCell(null)
+    }
+  }
+
+  const handleSaveChanges = () => {
+    if (localEsquema) {
+      updateEsquemaCurso(localEsquema)
+      setIsEditing(false)
+      setEditingCell(null)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setLocalEsquema(JSON.parse(JSON.stringify(esquemaCurso)))
+    setIsEditing(false)
+    setEditingCell(null)
+  }
+
   const handleExport = () => {
     exportEsquemaCursoToExcel(esquemaCurso)
+  }
+
+  const renderEditableCell = (path: string, value: string, style?: React.CSSProperties, isEditable = true) => {
+    const isCurrentlyEditing = editingCell?.path === path
+
+    // Only show edit interface if field is editable
+    if (isEditing && !isCurrentlyEditing && isEditable) {
+      return (
+        <div
+          onClick={() => handleStartEdit(path, value)}
+          style={{
+            ...style,
+            cursor: "pointer",
+            padding: "4px 8px",
+            borderRadius: "4px",
+            border: "1px solid transparent",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.border = "1px solid #0078d4"
+            e.currentTarget.style.background = "#f3f9ff"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.border = "1px solid transparent"
+            e.currentTarget.style.background = "transparent"
+          }}
+        >
+          {value}
+        </div>
+      )
+    }
+
+    if (isCurrentlyEditing && isEditable) {
+      return (
+        <Input
+          value={editingCell.value}
+          onChange={(e) => handleCellChange(e.target.value)}
+          onBlur={handleCellBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleCellBlur()
+            } else if (e.key === "Escape") {
+              setEditingCell(null)
+            }
+          }}
+          autoFocus
+          style={{ width: "100%" }}
+        />
+      )
+    }
+
+    return <div style={style}>{value}</div>
   }
 
   if (!esquemaCurso || !esquemaCurso.esquemas_unidad) {
@@ -146,6 +299,8 @@ export function EsquemaTable({
       </div>
     )
   }
+
+  const displayEsquema = localEsquema || esquemaCurso
 
   return (
     <div
@@ -224,13 +379,13 @@ export function EsquemaTable({
           </div>
         </div>
       ) : (
-        <
-        
-        >
+        <>
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-end",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "8px",
               padding: "12px 8px 12px 16px",
               background: "white",
               borderBottom: "1px solid #e0e0e0",
@@ -239,190 +394,275 @@ export function EsquemaTable({
               zIndex: 5,
             }}
           >
-            <Button appearance="transparent" style={{ background: "#107c10", color: "white" }} icon={<ArrowDownload20Regular />} onClick={handleExport}>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {!isEditing ? (
+                <Button appearance="subtle" size="small" icon={<Edit20Regular />} onClick={() => setIsEditing(true)}>
+                  Editar
+                </Button>
+              ) : (
+                <>
+                  <Button appearance="primary" size="small" icon={<Save20Regular />} onClick={handleSaveChanges}>
+                    Guardar
+                  </Button>
+                  <Button appearance="subtle" size="small" icon={<Dismiss20Regular />} onClick={handleCancelEdit}>
+                    Cancelar
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <Button
+              appearance="primary"
+              size="small"
+              icon={<ArrowDownload20Regular />}
+              onClick={handleExport}
+              style={{ background: "#107c10", color: "white" }}
+            >
               Exportar a Excel
             </Button>
           </div>
-            <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            paddingLeft: "8px",
-          }}
-        >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell style={{ width: "40px" }}></TableHeaderCell>
-                <TableHeaderCell>Nivel</TableHeaderCell>
-                <TableHeaderCell>Descripción</TableHeaderCell>
-                <TableHeaderCell>Logro de Aprendizaje</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
 
-            <TableBody>
-              {esquemaCurso.esquemas_unidad.map((unidad: any) => {
-                const unidadKey = unidad.numero_unidad
-                const isUnidadExpanded = expanded.unidades.has(unidadKey)
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              paddingLeft: "8px",
+            }}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHeaderCell style={{ width: "40px" }}></TableHeaderCell>
+                  <TableHeaderCell>Nivel</TableHeaderCell>
+                  <TableHeaderCell>Descripción</TableHeaderCell>
+                  <TableHeaderCell>Logro de Aprendizaje</TableHeaderCell>
+                </TableRow>
+              </TableHeader>
 
-                return (
-                  <React.Fragment key={`unidad-${unidadKey}`}>
-                    {/* Fila de Unidad */}
-                    <TableRow style={{ background: "#f5f5f5" }}>
-                      <TableCell>
-                        <Button
-                          appearance="subtle"
-                          size="small"
-                          icon={isUnidadExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
-                          onClick={() => toggleUnidad(unidadKey)}
-                        />
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>Unidad {unidad.numero_unidad}</TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>{unidad.titulo_unidad}</TableCell>
-                      <TableCell>{unidad.logro_de_aprendizaje_unidad}</TableCell>
-                    </TableRow>
+              <TableBody>
+                {displayEsquema.esquemas_unidad.map((unidad: any, unidadIdx: number) => {
+                  const unidadKey = unidad.numero_unidad
+                  const isUnidadExpanded = expanded.unidades.has(unidadKey)
 
-                    {/* Semanas dentro de la Unidad */}
-                    {isUnidadExpanded &&
-                      unidad.semanas?.map((semana: any) => {
-                        const semanaKey = `${unidadKey}-${semana.numero_semana}`
-                        const isSemanaExpanded = expanded.semanas.has(semanaKey)
+                  return (
+                    <React.Fragment key={`unidad-${unidadKey}`}>
+                      <TableRow style={{ background: "#f5f5f5" }}>
+                        <TableCell style={{ width: "40px", padding: "8px" }}>
+                          <Button
+                            appearance="subtle"
+                            size="small"
+                            icon={isUnidadExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                            onClick={() => toggleUnidad(unidadKey)}
+                          />
+                        </TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>Unidad {unidad.numero_unidad}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>
+                          {renderEditableCell(
+                            `unidad-${unidadIdx}-titulo_unidad`,
+                            unidad.titulo_unidad,
+                            {
+                              fontWeight: 600,
+                            },
+                            false,
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {renderEditableCell(
+                            `unidad-${unidadIdx}-logro_de_aprendizaje_unidad`,
+                            unidad.logro_de_aprendizaje_unidad,
+                            {},
+                            false,
+                          )}
+                        </TableCell>
+                      </TableRow>
 
-                        return (
-                          <React.Fragment key={`semana-${semanaKey}`}>
-                            {/* Fila de Semana */}
-                            <TableRow style={{ background: "#fafafa" }}>
-                              <TableCell style={{ paddingLeft: "24px" }}>
-                                <Button
-                                  appearance="subtle"
-                                  size="small"
-                                  icon={isSemanaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
-                                  onClick={() => toggleSemana(semanaKey)}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                Semana {semana.numero_semana} - {semana.nombre_de_la_sesion}
-                              </TableCell>
-                              <TableCell>{semana.nombre_de_la_sesion}</TableCell>
-                              <TableCell>{semana.logro_de_aprendizaje_semana}</TableCell>
-                            </TableRow>
+                      {isUnidadExpanded &&
+                        unidad.semanas?.map((semana: any, semanaIdx: number) => {
+                          const semanaKey = `${unidadKey}-${semana.numero_semana}`
+                          const isSemanaExpanded = expanded.semanas.has(semanaKey)
 
-                            {/* Temas dentro de la Semana */}
-                            {isSemanaExpanded &&
-                              semana.temas?.map((tema: any, temaIdx: number) => {
-                                const temaKey = `${semanaKey}-tema-${temaIdx}`
-                                const isTemaExpanded = expanded.temas.has(temaKey)
-                                const hasSubtemas = tema.subtemas && tema.subtemas.length > 0
+                          return (
+                            <React.Fragment key={`semana-${semanaKey}`}>
+                              <TableRow style={{ background: "#fafafa" }}>
+                                <TableCell style={{ width: "40px", padding: "8px 8px 8px 32px" }}>
+                                  <Button
+                                    appearance="subtle"
+                                    size="small"
+                                    icon={isSemanaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                                    onClick={() => toggleSemana(semanaKey)}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  Semana {semana.numero_semana} - {semana.nombre_de_la_sesion}
+                                </TableCell>
+                                <TableCell>
+                                  {renderEditableCell(
+                                    `semana-${unidadIdx}-${semanaIdx}-nombre_de_la_sesion`,
+                                    semana.nombre_de_la_sesion,
+                                    {},
+                                    false,
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {renderEditableCell(
+                                    `semana-${unidadIdx}-${semanaIdx}-logro_de_aprendizaje_semana`,
+                                    semana.logro_de_aprendizaje_semana,
+                                    {},
+                                    false,
+                                  )}
+                                </TableCell>
+                              </TableRow>
 
-                                return (
-                                  <React.Fragment key={`tema-${temaKey}`}>
-                                    <TableRow
-                                      style={{
-                                        background: "white",
-                                        cursor: hasSubtemas ? "pointer" : "default",
-                                      }}
-                                      onClick={hasSubtemas ? () => toggleTema(temaKey) : undefined}
-                                      onMouseEnter={(e) => {
-                                        if (hasSubtemas) {
-                                          e.currentTarget.style.background = "#f0f0f0"
-                                        }
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = "white"
-                                      }}
-                                    >
-                                      <TableCell style={{ paddingLeft: "40px" }}>
-                                        {hasSubtemas && (
-                                          <Button
-                                            appearance="subtle"
-                                            size="small"
-                                            icon={isTemaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              toggleTema(temaKey)
-                                            }}
-                                          />
-                                        )}
-                                      </TableCell>
-                                      <TableCell>Tema</TableCell>
-                                      <TableCell>{tema.titulo_tema}</TableCell>
-                                      <TableCell>{tema.logro_de_aprendizaje_tema}</TableCell>
-                                    </TableRow>
+                              {isSemanaExpanded &&
+                                semana.temas?.map((tema: any, temaIdx: number) => {
+                                  const temaKey = `${semanaKey}-tema-${temaIdx}`
+                                  const isTemaExpanded = expanded.temas.has(temaKey)
+                                  const hasSubtemas = tema.subtemas && tema.subtemas.length > 0
 
-                                    {/* Subtemas dentro del Tema */}
-                                    {isTemaExpanded &&
-                                      tema.subtemas?.map((subtema: any, subIdx: number) => {
-                                        const subtemaKey = `${temaKey}-subtema-${subIdx}`
-                                        const isSubtemaExpanded = expanded.subtemas.has(subtemaKey)
-                                        const hasApartados = subtema.apartados && subtema.apartados.length > 0
-
-                                        return (
-                                          <React.Fragment key={`subtema-${subtemaKey}`}>
-                                            <TableRow
-                                              style={{
-                                                background: "#fcfcfc",
-                                                cursor: hasApartados ? "pointer" : "default",
+                                  return (
+                                    <React.Fragment key={`tema-${temaKey}`}>
+                                      <TableRow
+                                        style={{
+                                          background: "white",
+                                          cursor: hasSubtemas && !isEditing ? "pointer" : "default",
+                                        }}
+                                        onClick={hasSubtemas && !isEditing ? () => toggleTema(temaKey) : undefined}
+                                        onMouseEnter={(e) => {
+                                          if (hasSubtemas && !isEditing) {
+                                            e.currentTarget.style.background = "#f0f0f0"
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = "white"
+                                        }}
+                                      >
+                                        <TableCell style={{ width: "40px", padding: "8px 8px 8px 56px" }}>
+                                          {hasSubtemas && (
+                                            <Button
+                                              appearance="subtle"
+                                              size="small"
+                                              icon={
+                                                isTemaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />
+                                              }
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                toggleTema(temaKey)
                                               }}
-                                              onClick={hasApartados ? () => toggleSubtema(subtemaKey) : undefined}
-                                              onMouseEnter={(e) => {
-                                                if (hasApartados) {
-                                                  e.currentTarget.style.background = "#e8e8e8"
+                                            />
+                                          )}
+                                        </TableCell>
+                                        <TableCell style={{paddingLeft:"25px"}}>Tema</TableCell>
+                                        <TableCell>
+                                          {renderEditableCell(
+                                            `tema-${unidadIdx}-${semanaIdx}-${temaIdx}-titulo_tema`,
+                                            tema.titulo_tema,
+                                            {},
+                                            true,
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {renderEditableCell(
+                                            `tema-${unidadIdx}-${semanaIdx}-${temaIdx}-logro_de_aprendizaje_tema`,
+                                            tema.logro_de_aprendizaje_tema,
+                                            {},
+                                            true,
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+
+                                      {isTemaExpanded &&
+                                        tema.subtemas?.map((subtema: any, subIdx: number) => {
+                                          const subtemaKey = `${temaKey}-subtema-${subIdx}`
+                                          const isSubtemaExpanded = expanded.subtemas.has(subtemaKey)
+                                          const hasApartados = subtema.apartados && subtema.apartados.length > 0
+
+                                          return (
+                                            <React.Fragment key={`subtema-${subtemaKey}`}>
+                                              <TableRow
+                                                style={{
+                                                  background: "#fcfcfc",
+                                                  cursor: hasApartados && !isEditing ? "pointer" : "default",
+                                                }}
+                                                onClick={
+                                                  hasApartados && !isEditing
+                                                    ? () => toggleSubtema(subtemaKey)
+                                                    : undefined
                                                 }
-                                              }}
-                                              onMouseLeave={(e) => {
-                                                e.currentTarget.style.background = "#fcfcfc"
-                                              }}
-                                            >
-                                              <TableCell style={{ paddingLeft: "50px" }}>
-                                                {hasApartados && (
-                                                  <Button
-                                                    appearance="subtle"
-                                                    size="small"
-                                                    icon={
-                                                      isSubtemaExpanded ? (
-                                                        <ChevronDown20Regular />
-                                                      ) : (
-                                                        <ChevronRight20Regular />
-                                                      )
-                                                    }
-                                                    onClick={(e) => {
-                                                      e.stopPropagation()
-                                                      toggleSubtema(subtemaKey)
-                                                    }}
-                                                  />
-                                                )}
-                                              </TableCell>
-                                              <TableCell style={{ paddingLeft: "16px" }}>Subtema</TableCell>
-                                              <TableCell>{subtema.titulo_subtema}</TableCell>
-                                              <TableCell>{subtema.logro_de_aprendizaje_subtema}</TableCell>
-                                            </TableRow>
+                                                onMouseEnter={(e) => {
+                                                  if (hasApartados && !isEditing) {
+                                                    e.currentTarget.style.background = "#e8e8e8"
+                                                  }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  e.currentTarget.style.background = "#fcfcfc"
+                                                }}
+                                              >
+                                                <TableCell style={{ width: "40px", padding: "8px 8px 8px 80px" }}>
+                                                  {hasApartados && (
+                                                    <Button
+                                                      appearance="subtle"
+                                                      size="small"
+                                                      icon={
+                                                        isSubtemaExpanded ? (
+                                                          <ChevronDown20Regular />
+                                                        ) : (
+                                                          <ChevronRight20Regular />
+                                                        )
+                                                      }
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        toggleSubtema(subtemaKey)
+                                                      }}
+                                                    />
+                                                  )}
+                                                </TableCell>
+                                                <TableCell style={{paddingLeft:"50px"}}>Subtema</TableCell>
+                                                <TableCell>
+                                                  {renderEditableCell(
+                                                    `subtema-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-titulo_subtema`,
+                                                    subtema.titulo_subtema,
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {renderEditableCell(
+                                                    `subtema-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-logro_de_aprendizaje_subtema`,
+                                                    subtema.logro_de_aprendizaje_subtema,
+                                                  )}
+                                                </TableCell>
+                                              </TableRow>
 
-                                            {/* Apartados dentro del Subtema */}
-                                            {isSubtemaExpanded &&
-                                              subtema.apartados?.map((apartado: string, apIdx: number) => (
-                                                <TableRow
-                                                  key={`apartado-${subtemaKey}-${apIdx}`}
-                                                  style={{ background: "white" }}
-                                                >
-                                                  <TableCell style={{ paddingLeft: "96px" }}></TableCell>
-                                                  <TableCell style={{ paddingLeft: "32px" }}>Apartado</TableCell>
-                                                  <TableCell colSpan={2}>{apartado}</TableCell>
-                                                </TableRow>
-                                              ))}
-                                          </React.Fragment>
-                                        )
-                                      })}
-                                  </React.Fragment>
-                                )
-                              })}
-                          </React.Fragment>
-                        )
-                      })}
-                  </React.Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
+                                              {isSubtemaExpanded &&
+                                                subtema.apartados?.map((apartado: string, apIdx: number) => (
+                                                  <TableRow
+                                                    key={`apartado-${subtemaKey}-${apIdx}`}
+                                                    style={{ background: "white" }}
+                                                  >
+                                                    <TableCell
+                                                      style={{ width: "40px", padding: "8px 8px 8px 104px" }}
+                                                    ></TableCell>
+                                                    <TableCell style={{paddingLeft:"50px"}}>{`Apartado ${apIdx+1}` }</TableCell>
+                                                    <TableCell colSpan={2}>
+                                                      {renderEditableCell(
+                                                        `apartado-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-${apIdx}`,
+                                                        apartado,
+                                                      )}
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                            </React.Fragment>
+                                          )
+                                        })}
+                                    </React.Fragment>
+                                  )
+                                })}
+                            </React.Fragment>
+                          )
+                        })}
+                    </React.Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
         </>
       )}
