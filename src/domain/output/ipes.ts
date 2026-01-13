@@ -56,8 +56,9 @@ export interface PresentacionIPES {
 }
 
 export interface EjerciciosIPES {
-  tema: string
-  subtemas: string[]
+  proposito_actividad: string
+  tiempo_actividad: string[]
+  detalle_actividad: string
   codigo_actividad: string
   tipo_actividad: "Calificada" | "No Calificada"
 }

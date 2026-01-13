@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { Card, Button, Text, Title2, ProgressBar, Input, Field } from "@fluentui/react-components"
+import { Card, Button, Text, Title2, ProgressBar, Input, Field, Combobox, Option } from "@fluentui/react-components"
 import {
   ArrowLeftRegular,
   ArrowRightRegular,
@@ -15,6 +15,7 @@ import { useState, useEffect, useRef } from "react"
 import { useDocumentStore } from "../../infrastructure/store/document-store"
 import { useSchemaHandler } from "../hooks/schema-handler"
 import { useIpesHandler } from "../hooks/ipes-handler"
+import { CourseInfoHeader } from "./course-info-header"
 
 type MessageIntent = "info" | "success" | "warning" | "error"
 
@@ -24,10 +25,6 @@ interface ProgressCardProps {
   currentMiniStepIndex: number
   completedMiniSteps: number
   totalMiniSteps: number
-  completedSteps: number
-  onPreviousClick: () => void
-  onNextClick: () => void
-  onMiniStepSelect: (index: number) => void
   requirementData?: RequirementData[]
   onRequirementChange?: (field: string, value: string) => void
   formValues?: Record<string, string>
@@ -112,12 +109,16 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
   }
 
   const { updateField, requestTimings, loadingSteps, cancelStep } = useDocumentStore()
+  const apiData = useDocumentStore((state) => state.apiData)
   const { handleGenerateSchema } = useSchemaHandler({ onMessage: showMessage })
   const { handleGenerateIpes } = useIpesHandler({ onMessage: showMessage })
 
   const progressValue = totalMiniSteps > 0 ? (completedMiniSteps / totalMiniSteps) * 100 : 0
   const currentMiniStep = steps[currentStepIndex]?.miniSteps[currentMiniStepIndex]
   const currentStepTitle = steps[currentStepIndex]?.title || "Progreso"
+
+  const courseCode = formValues?.cod_curso || ""
+  const courseName = apiData?.["step1_mini0"]?.esquemaCurso?.curso || ""
 
   const [lockedFields, setLockedFields] = useState<Record<string, boolean>>({})
 
@@ -155,6 +156,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
 
   const executeStep = (stepId, miniStepId) => {
     if (stepId === "step3") return handleGenerateIpes(2, 0)
+    if (stepId === "step2") return handleGenerateSchema(1, 0)
   }
 
   const canGoNext =
@@ -360,17 +362,20 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
           overflowY: "auto",
         }}
       >
-        <Title2 style={{ marginBottom: "16px", color: "#0078d4", flexShrink: 0 }}>Progreso</Title2>
+        {/* <Title2 style={{ marginBottom: "16px", color: "#0078d4", flexShrink: 0 }}>Progreso</Title2> */}
+
+        <CourseInfoHeader courseName="MATEMATICA I" courseCode={courseCode} />
 
         <Text weight="semibold" size={300} style={{ marginBottom: "12px", color: "#323130" }}>
           Pasos completados {currentStepIndex + 1}/{steps.length}
         </Text>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           {steps.map((step, idx) => {
             const { completed, total } = getStepProgress(step)
             const status = getStepStatus(step)
             const loading = isStepLoading(idx)
+            const hasRetryAction = step.id === "step2" || step.id === "step3"
 
             return (
               <div
@@ -405,15 +410,45 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
                     (Cargando...)
                   </Text>
                 )}
+
+                {hasRetryAction && (
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    {loading ? (
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const stepKey = `step${idx}_mini0`
+                          cancelStep(stepKey)
+                          showMessage(`Paso cancelado: ${step.title}`, "warning")
+                        }}
+                        icon={<DismissRegular style={{ fontSize: "18px", color: "#d13438" }} />}
+                      />
+                    ) : (
+                      status === "error" && (
+                        <Button
+                          appearance="subtle"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            executeStep(step.id, null)
+                          }}
+                          icon={<ArrowClockwiseFilled style={{ fontSize: "18px", color: "#888888ff" }} />}
+                        />
+                      )
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
 
-        <ProgressBar value={progressValue} max={100} style={{ marginBottom: "16px" }} />
+        <ProgressBar value={progressValue} max={100} style={{ marginBottom: "8px" }} />
 
         {requirementData && requirementData.length > 0 && (
-          <div style={{ marginBottom: "20px" }}>
+          <div >
             <Text weight="semibold" size={300} style={{ marginBottom: "8px" }}>
               Requerimientos de información
             </Text>
@@ -421,6 +456,51 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {requirementData.map((req) => (
                 <div key={req.id} style={{ margin: "1rem", marginRight: "0.5rem", marginLeft: "0.5rem" }}>
+                  {req.type === "combo_box" && (
+                    <Field label={req.label} required>
+                      <Combobox
+                        id={req.id}
+                        style={{ width: "100%" }}
+                        value={formValues?.[req.field] ?? ""}
+                        onOptionSelect={(e, data) => {
+                          const value = data.optionValue ?? ""
+                          updateField(req.field, value)
+                          onRequirementChange?.(req.field, value)
+                        }}
+                        disabled={lockedFields[req.field] === true}
+                      >
+                        {req.options?.map((option) => (
+                          <Option key={option} value={option}>
+                            {option}
+                          </Option>
+                        ))}
+                      </Combobox>
+                      <span
+                        onClick={() => {
+                          if (lockedFields[req.field]) {
+                            handleUnlockField(req.field)
+                          } else {
+                            handleSetField(req.field)
+                          }
+                        }}
+                        style={{
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          position: "absolute",
+                          right: "12px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                        }}
+                      >
+                        {lockedFields[req.field] ? (
+                          <CheckmarkLockRegular style={{ fontSize: "20px", color: "#888888ff" }} />
+                        ) : (
+                          <CheckmarkCircleRegular style={{ fontSize: "20px", color: "#11da0aff" }} />
+                        )}
+                      </span>
+                    </Field>
+                  )}
                   {req.type === "input" && (
                     <Field label={req.label} required>
                       <Input
@@ -511,9 +591,10 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
                       Tiempo: {formatTiming(timing)}
                     </Text>
                   )}
+                  
                 </div>
-                <div style={{ display: "flex", gap: "4px" }}>
-                  {isLoading ? (
+
+                    {isLoading ? (
                     <Button
                       appearance="subtle"
                       size="small"
@@ -533,9 +614,8 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
                         executeStep(steps[currentStepIndex].id, miniStep.id)
                       }}
                       icon={<ArrowClockwiseFilled style={{ fontSize: "20px", color: "#888888ff" }} />}
-                    />
-                  )}
-                </div>
+                    />)}
+         
               </div>
             )
           })}

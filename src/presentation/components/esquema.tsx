@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import {
@@ -11,14 +11,30 @@ import {
   TableHeaderCell,
   TableRow,
   Button,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
+  Input,
 } from "@fluentui/react-components"
 import { exportEsquemaCursoToExcel } from "../utils/export-excel"
-import { ArrowDownload20Regular } from "@fluentui/react-icons"
+import {
+  ArrowDownload20Regular,
+  ChevronRight20Regular,
+  ChevronDown20Regular,
+  Edit20Regular,
+  Save20Regular,
+  Dismiss20Regular,
+} from "@fluentui/react-icons"
+import { useDocumentStore } from "../../infrastructure/store/document-store"
+
+interface ExpandedState {
+  unidades: Set<number>
+  semanas: Set<string>
+  temas: Set<string>
+  subtemas: Set<string>
+}
+
+interface EditingCell {
+  path: string // e.g., "unidad-0-titulo_unidad"
+  value: string
+}
 
 export function EsquemaTable({
   esquemaCurso,
@@ -29,9 +45,24 @@ export function EsquemaTable({
   width: number
   onWidthChange: (width: number) => void
 }) {
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalTitle, setModalTitle] = useState("")
-  const [modalData, setModalData] = useState<any[]>([])
+  const [expanded, setExpanded] = useState<ExpandedState>({
+    unidades: new Set(),
+    semanas: new Set(),
+    temas: new Set(),
+    subtemas: new Set(),
+  })
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
+  const [localEsquema, setLocalEsquema] = useState<any>(null)
+  const updateEsquemaCurso = useDocumentStore((state) => state.updateEsquemaCurso)
+
+  useEffect(() => {
+    if (esquemaCurso) {
+      setLocalEsquema(JSON.parse(JSON.stringify(esquemaCurso)))
+    }
+  }, [esquemaCurso])
+
   const [isResizing, setIsResizing] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const startXRef = useRef(0)
@@ -77,15 +108,199 @@ export function EsquemaTable({
     }
   }, [isResizing, width, onWidthChange, isCollapsed])
 
-  const openModal = (title: string, data: any[]) => {
-    setModalTitle(title)
-    setModalData(data)
-    setModalOpen(true)
+  const toggleUnidad = (unidadNum: number) => {
+    setExpanded((prev) => {
+      const newUnidades = new Set(prev.unidades)
+      if (newUnidades.has(unidadNum)) {
+        newUnidades.delete(unidadNum)
+      } else {
+        newUnidades.add(unidadNum)
+      }
+      return { ...prev, unidades: newUnidades }
+    })
+  }
+
+  const toggleSemana = (key: string) => {
+    setExpanded((prev) => {
+      const newSemanas = new Set(prev.semanas)
+      if (newSemanas.has(key)) {
+        newSemanas.delete(key)
+      } else {
+        newSemanas.add(key)
+      }
+      return { ...prev, semanas: newSemanas }
+    })
+  }
+
+  const toggleTema = (key: string) => {
+    setExpanded((prev) => {
+      const newTemas = new Set(prev.temas)
+      if (newTemas.has(key)) {
+        newTemas.delete(key)
+      } else {
+        newTemas.add(key)
+      }
+      return { ...prev, temas: newTemas }
+    })
+  }
+
+  const toggleSubtema = (key: string) => {
+    setExpanded((prev) => {
+      const newSubtemas = new Set(prev.subtemas)
+      if (newSubtemas.has(key)) {
+        newSubtemas.delete(key)
+      } else {
+        newSubtemas.add(key)
+      }
+      return { ...prev, subtemas: newSubtemas }
+    })
+  }
+
+  const handleStartEdit = (path: string, currentValue: string) => {
+    if (!isEditing) return
+    setEditingCell({ path, value: currentValue })
+  }
+
+  const handleCellChange = (value: string) => {
+    if (editingCell) {
+      setEditingCell({ ...editingCell, value })
+    }
+  }
+
+  const handleCellBlur = () => {
+    if (editingCell && localEsquema) {
+      const pathParts = editingCell.path.split("-")
+      const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+
+      if (pathParts[0] === "unidad") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const field = pathParts[2]
+        newEsquema.esquemas_unidad[unidadIdx][field] = editingCell.value
+      } else if (pathParts[0] === "semana") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const field = pathParts[3]
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx][field] = editingCell.value
+      } else if (pathParts[0] === "tema") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const temaIdx = Number.parseInt(pathParts[3])
+        const field = pathParts[4]
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx][field] = editingCell.value
+      } else if (pathParts[0] === "subtema") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const temaIdx = Number.parseInt(pathParts[3])
+        const subtemaIdx = Number.parseInt(pathParts[4])
+        const field = pathParts[5]
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas[subtemaIdx][field] =
+          editingCell.value
+      } else if (pathParts[0] === "apartado") {
+        const unidadIdx = Number.parseInt(pathParts[1])
+        const semanaIdx = Number.parseInt(pathParts[2])
+        const temaIdx = Number.parseInt(pathParts[3])
+        const subtemaIdx = Number.parseInt(pathParts[4])
+        const apartadoIdx = Number.parseInt(pathParts[5])
+        newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas[subtemaIdx].apartados[
+          apartadoIdx
+        ] = editingCell.value
+      }
+
+      setLocalEsquema(newEsquema)
+      setEditingCell(null)
+    }
+  }
+
+  const handleSaveChanges = () => {
+    if (localEsquema) {
+      updateEsquemaCurso(localEsquema)
+      setIsEditing(false)
+      setEditingCell(null)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setLocalEsquema(JSON.parse(JSON.stringify(esquemaCurso)))
+    setIsEditing(false)
+    setEditingCell(null)
   }
 
   const handleExport = () => {
     exportEsquemaCursoToExcel(esquemaCurso)
   }
+
+  const renderEditableCell = (path: string, value: string, style?: React.CSSProperties, isEditable = true) => {
+    const isCurrentlyEditing = editingCell?.path === path
+
+    // Only show edit interface if field is editable
+    if (isEditing && !isCurrentlyEditing && isEditable) {
+      return (
+        <div
+          onClick={() => handleStartEdit(path, value)}
+          style={{
+            ...style,
+            cursor: "pointer",
+            padding: "4px 8px",
+            borderRadius: "4px",
+            border: "1px solid transparent",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.border = "1px solid #0078d4"
+            e.currentTarget.style.background = "#f3f9ff"
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.border = "1px solid transparent"
+            e.currentTarget.style.background = "transparent"
+          }}
+        >
+          {value}
+        </div>
+      )
+    }
+
+    if (isCurrentlyEditing && isEditable) {
+      return (
+        <Input
+          value={editingCell.value}
+          onChange={(e) => handleCellChange(e.target.value)}
+          onBlur={handleCellBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleCellBlur()
+            } else if (e.key === "Escape") {
+              setEditingCell(null)
+            }
+          }}
+          autoFocus
+          style={{ width: "100%" }}
+        />
+      )
+    }
+
+    return <div style={style}>{value}</div>
+  }
+
+  if (!esquemaCurso || !esquemaCurso.esquemas_unidad) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          background: "white",
+          padding: "40px",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginLeft: "8px",
+        }}
+      >
+        <p style={{ color: "#666", fontSize: "14px" }}>Cargando esquema del curso...</p>
+      </div>
+    )
+  }
+
+  const displayEsquema = localEsquema || esquemaCurso
 
   return (
     <div
@@ -164,169 +379,293 @@ export function EsquemaTable({
           </div>
         </div>
       ) : (
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            paddingLeft: "8px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px", paddingRight: "8px" }}>
-            <Button appearance="primary" size="small" icon={<ArrowDownload20Regular />} onClick={handleExport}>
+        <>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "8px",
+              padding: "12px 8px 12px 16px",
+              background: "white",
+              borderBottom: "1px solid #e0e0e0",
+              position: "sticky",
+              top: 0,
+              zIndex: 5,
+            }}
+          >
+            <div style={{ display: "flex", gap: "8px" }}>
+              {!isEditing ? (
+                <Button appearance="subtle" size="small" icon={<Edit20Regular />} onClick={() => setIsEditing(true)}>
+                  Editar
+                </Button>
+              ) : (
+                <>
+                  <Button appearance="primary" size="small" icon={<Save20Regular />} onClick={handleSaveChanges}>
+                    Guardar
+                  </Button>
+                  <Button appearance="subtle" size="small" icon={<Dismiss20Regular />} onClick={handleCancelEdit}>
+                    Cancelar
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <Button
+              appearance="primary"
+              size="small"
+              icon={<ArrowDownload20Regular />}
+              onClick={handleExport}
+              style={{ background: "#107c10", color: "white" }}
+            >
               Exportar a Excel
             </Button>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell>Unidad</TableHeaderCell>
-                <TableHeaderCell>Título</TableHeaderCell>
-                <TableHeaderCell>Logro</TableHeaderCell>
-                <TableHeaderCell>Semanas</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {esquemaCurso.esquemas_unidad.map((unidad: any) => (
-                <TableRow key={unidad.numero_unidad}>
-                  <TableCell>{unidad.numero_unidad}</TableCell>
-                  <TableCell>{unidad.titulo_unidad}</TableCell>
-                  <TableCell>{unidad.logro_de_aprendizaje_unidad}</TableCell>
-                  <TableCell>
-                    <Button
-                      appearance="primary"
-                      onClick={() => openModal(`Semanas de Unidad ${unidad.numero_unidad}`, unidad.semanas)}
-                    >
-                      Ver semanas
-                    </Button>
-                  </TableCell>
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              paddingLeft: "8px",
+            }}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHeaderCell style={{ width: "40px" }}></TableHeaderCell>
+                  <TableHeaderCell>Nivel</TableHeaderCell>
+                  <TableHeaderCell>Descripción</TableHeaderCell>
+                  <TableHeaderCell>Logro de Aprendizaje</TableHeaderCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+
+              <TableBody>
+                {displayEsquema.esquemas_unidad.map((unidad: any, unidadIdx: number) => {
+                  const unidadKey = unidad.numero_unidad
+                  const isUnidadExpanded = expanded.unidades.has(unidadKey)
+
+                  return (
+                    <React.Fragment key={`unidad-${unidadKey}`}>
+                      <TableRow style={{ background: "#f5f5f5" }}>
+                        <TableCell style={{ width: "40px", padding: "8px" }}>
+                          <Button
+                            appearance="subtle"
+                            size="small"
+                            icon={isUnidadExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                            onClick={() => toggleUnidad(unidadKey)}
+                          />
+                        </TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>Unidad {unidad.numero_unidad}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>
+                          {renderEditableCell(
+                            `unidad-${unidadIdx}-titulo_unidad`,
+                            unidad.titulo_unidad,
+                            {
+                              fontWeight: 600,
+                            },
+                            false,
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {renderEditableCell(
+                            `unidad-${unidadIdx}-logro_de_aprendizaje_unidad`,
+                            unidad.logro_de_aprendizaje_unidad,
+                            {},
+                            false,
+                          )}
+                        </TableCell>
+                      </TableRow>
+
+                      {isUnidadExpanded &&
+                        unidad.semanas?.map((semana: any, semanaIdx: number) => {
+                          const semanaKey = `${unidadKey}-${semana.numero_semana}`
+                          const isSemanaExpanded = expanded.semanas.has(semanaKey)
+
+                          return (
+                            <React.Fragment key={`semana-${semanaKey}`}>
+                              <TableRow style={{ background: "#fafafa" }}>
+                                <TableCell style={{ width: "40px", padding: "8px 8px 8px 32px" }}>
+                                  <Button
+                                    appearance="subtle"
+                                    size="small"
+                                    icon={isSemanaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />}
+                                    onClick={() => toggleSemana(semanaKey)}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  Semana {semana.numero_semana} - {semana.nombre_de_la_sesion}
+                                </TableCell>
+                                <TableCell>
+                                  {renderEditableCell(
+                                    `semana-${unidadIdx}-${semanaIdx}-nombre_de_la_sesion`,
+                                    semana.nombre_de_la_sesion,
+                                    {},
+                                    false,
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {renderEditableCell(
+                                    `semana-${unidadIdx}-${semanaIdx}-logro_de_aprendizaje_semana`,
+                                    semana.logro_de_aprendizaje_semana,
+                                    {},
+                                    false,
+                                  )}
+                                </TableCell>
+                              </TableRow>
+
+                              {isSemanaExpanded &&
+                                semana.temas?.map((tema: any, temaIdx: number) => {
+                                  const temaKey = `${semanaKey}-tema-${temaIdx}`
+                                  const isTemaExpanded = expanded.temas.has(temaKey)
+                                  const hasSubtemas = tema.subtemas && tema.subtemas.length > 0
+
+                                  return (
+                                    <React.Fragment key={`tema-${temaKey}`}>
+                                      <TableRow
+                                        style={{
+                                          background: "white",
+                                          cursor: hasSubtemas && !isEditing ? "pointer" : "default",
+                                        }}
+                                        onClick={hasSubtemas && !isEditing ? () => toggleTema(temaKey) : undefined}
+                                        onMouseEnter={(e) => {
+                                          if (hasSubtemas && !isEditing) {
+                                            e.currentTarget.style.background = "#f0f0f0"
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = "white"
+                                        }}
+                                      >
+                                        <TableCell style={{ width: "40px", padding: "8px 8px 8px 56px" }}>
+                                          {hasSubtemas && (
+                                            <Button
+                                              appearance="subtle"
+                                              size="small"
+                                              icon={
+                                                isTemaExpanded ? <ChevronDown20Regular /> : <ChevronRight20Regular />
+                                              }
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                toggleTema(temaKey)
+                                              }}
+                                            />
+                                          )}
+                                        </TableCell>
+                                        <TableCell style={{paddingLeft:"25px"}}>Tema</TableCell>
+                                        <TableCell>
+                                          {renderEditableCell(
+                                            `tema-${unidadIdx}-${semanaIdx}-${temaIdx}-titulo_tema`,
+                                            tema.titulo_tema,
+                                            {},
+                                            true,
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {renderEditableCell(
+                                            `tema-${unidadIdx}-${semanaIdx}-${temaIdx}-logro_de_aprendizaje_tema`,
+                                            tema.logro_de_aprendizaje_tema,
+                                            {},
+                                            true,
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+
+                                      {isTemaExpanded &&
+                                        tema.subtemas?.map((subtema: any, subIdx: number) => {
+                                          const subtemaKey = `${temaKey}-subtema-${subIdx}`
+                                          const isSubtemaExpanded = expanded.subtemas.has(subtemaKey)
+                                          const hasApartados = subtema.apartados && subtema.apartados.length > 0
+
+                                          return (
+                                            <React.Fragment key={`subtema-${subtemaKey}`}>
+                                              <TableRow
+                                                style={{
+                                                  background: "#fcfcfc",
+                                                  cursor: hasApartados && !isEditing ? "pointer" : "default",
+                                                }}
+                                                onClick={
+                                                  hasApartados && !isEditing
+                                                    ? () => toggleSubtema(subtemaKey)
+                                                    : undefined
+                                                }
+                                                onMouseEnter={(e) => {
+                                                  if (hasApartados && !isEditing) {
+                                                    e.currentTarget.style.background = "#e8e8e8"
+                                                  }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  e.currentTarget.style.background = "#fcfcfc"
+                                                }}
+                                              >
+                                                <TableCell style={{ width: "40px", padding: "8px 8px 8px 80px" }}>
+                                                  {hasApartados && (
+                                                    <Button
+                                                      appearance="subtle"
+                                                      size="small"
+                                                      icon={
+                                                        isSubtemaExpanded ? (
+                                                          <ChevronDown20Regular />
+                                                        ) : (
+                                                          <ChevronRight20Regular />
+                                                        )
+                                                      }
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        toggleSubtema(subtemaKey)
+                                                      }}
+                                                    />
+                                                  )}
+                                                </TableCell>
+                                                <TableCell style={{paddingLeft:"50px"}}>Subtema</TableCell>
+                                                <TableCell>
+                                                  {renderEditableCell(
+                                                    `subtema-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-titulo_subtema`,
+                                                    subtema.titulo_subtema,
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {renderEditableCell(
+                                                    `subtema-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-logro_de_aprendizaje_subtema`,
+                                                    subtema.logro_de_aprendizaje_subtema,
+                                                  )}
+                                                </TableCell>
+                                              </TableRow>
+
+                                              {isSubtemaExpanded &&
+                                                subtema.apartados?.map((apartado: string, apIdx: number) => (
+                                                  <TableRow
+                                                    key={`apartado-${subtemaKey}-${apIdx}`}
+                                                    style={{ background: "white" }}
+                                                  >
+                                                    <TableCell
+                                                      style={{ width: "40px", padding: "8px 8px 8px 104px" }}
+                                                    ></TableCell>
+                                                    <TableCell style={{paddingLeft:"50px"}}>{`Apartado ${apIdx+1}` }</TableCell>
+                                                    <TableCell colSpan={2}>
+                                                      {renderEditableCell(
+                                                        `apartado-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-${apIdx}`,
+                                                        apartado,
+                                                      )}
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                            </React.Fragment>
+                                          )
+                                        })}
+                                    </React.Fragment>
+                                  )
+                                })}
+                            </React.Fragment>
+                          )
+                        })}
+                    </React.Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
-
-      <Dialog open={modalOpen} onOpenChange={(_, data) => setModalOpen(data.open)}>
-        <DialogSurface>
-          <DialogBody>
-            <DialogTitle>{modalTitle}</DialogTitle>
-            <DialogContent style={{ marginTop: "16px" }}>
-              {"numero_semana" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Semana</TableHeaderCell>
-                      <TableHeaderCell>Sesión</TableHeaderCell>
-                      <TableHeaderCell>Logro</TableHeaderCell>
-                      <TableHeaderCell>Temas</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {modalData.map((semana: any) => (
-                      <TableRow key={semana.numero_semana}>
-                        <TableCell>{semana.numero_semana}</TableCell>
-                        <TableCell>{semana.nombre_de_la_sesion}</TableCell>
-                        <TableCell>{semana.logro_de_aprendizaje_semana}</TableCell>
-                        <TableCell>
-                          <Button
-                            appearance="secondary"
-                            onClick={() => openModal(`Temas - Semana ${semana.numero_semana}`, semana.temas)}
-                          >
-                            Ver temas
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {"titulo_tema" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Tema</TableHeaderCell>
-                      <TableHeaderCell>Logro</TableHeaderCell>
-                      <TableHeaderCell>Subtemas</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {modalData.map((tema: any) => (
-                      <TableRow key={tema.titulo_tema}>
-                        <TableCell>{tema.titulo_tema}</TableCell>
-                        <TableCell>{tema.logro_de_aprendizaje_tema}</TableCell>
-                        <TableCell>
-                          <Button
-                            appearance="secondary"
-                            onClick={() => openModal(`Subtemas de ${tema.titulo_tema}`, tema.subtemas)}
-                          >
-                            Ver subtemas
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {"titulo_subtema" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Subtema</TableHeaderCell>
-                      <TableHeaderCell>Logro</TableHeaderCell>
-                      <TableHeaderCell>Apartados</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {modalData.map((sub: any) => (
-                      <TableRow key={sub.titulo_subtema}>
-                        <TableCell>{sub.titulo_subtema}</TableCell>
-                        <TableCell>{sub.logro_de_aprendizaje_subtema}</TableCell>
-                        <TableCell>
-                          <Button
-                            appearance="secondary"
-                            onClick={() =>
-                              openModal(
-                                `Apartados de ${sub.titulo_subtema}`,
-                                sub.apartados.map((a: string) => ({ apartado: a })),
-                              )
-                            }
-                          >
-                            Ver apartados
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {"apartado" in (modalData?.[0] || {}) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>Apartado</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {modalData.map((ap) => (
-                      <TableRow key={ap.apartado}>
-                        <TableCell>{ap.apartado}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </DialogContent>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
     </div>
   )
 }

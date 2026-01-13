@@ -27,6 +27,10 @@ export const useSchemaHandler = ({ onMessage }: UseSchemaHandlerProps) => {
       // 🚨 Validación de datos mínimos
       if (!formValues?.cod_curso) {
         onMessage("Error: Falta cod_curso para generar esquema", "error")
+        updateMiniStep(stepIdx, miniStepIdx, {
+          uploading: false,
+          validationStatus: "error",
+        })
         return
       }
 
@@ -39,7 +43,11 @@ export const useSchemaHandler = ({ onMessage }: UseSchemaHandlerProps) => {
       const startTime = performance.now()
 
       setGeneratingSchema(true)
-      updateMiniStep(stepIdx, miniStepIdx, { uploading: true, validationStatus: "pending" })
+      updateMiniStep(stepIdx, miniStepIdx, {
+        uploading: true,
+        validationStatus: "pending",
+        completed: false,
+      })
 
       try {
         // 🔥 Extraer datos de cada miniStep
@@ -137,6 +145,7 @@ export const useSchemaHandler = ({ onMessage }: UseSchemaHandlerProps) => {
       setRequestTiming,
       setStepLoading,
       setAbortController,
+      setGeneratingSchema,
     ],
   )
 

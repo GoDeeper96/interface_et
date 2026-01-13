@@ -61,6 +61,8 @@ interface DocumentStore {
   abortControllers: Record<string, AbortController>
   setAbortController: (stepKey: string, controller: AbortController) => void
   cancelStep: (stepKey: string) => void
+
+  updateEsquemaCurso: (esquemaCurso: any) => void
 }
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
@@ -160,6 +162,21 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       newSteps[stepIdx].miniSteps[miniStepIdx] = {
         ...newSteps[stepIdx].miniSteps[miniStepIdx],
         ...updates,
+      }
+      return { steps: newSteps }
+    }),
+
+  updateEsquemaCurso: (esquemaCurso) =>
+    set((state) => {
+      const newSteps = [...state.steps]
+      if (newSteps[1]?.miniSteps[0]) {
+        newSteps[1].miniSteps[0] = {
+          ...newSteps[1].miniSteps[0],
+          data: {
+            ...newSteps[1].miniSteps[0].data,
+            esquemaCurso: esquemaCurso,
+          },
+        }
       }
       return { steps: newSteps }
     }),
