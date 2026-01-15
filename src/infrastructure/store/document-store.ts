@@ -2,6 +2,15 @@ import { create } from "zustand"
 import type { MainStep, MiniStep } from "../../domain/workflow/step"
 import type { ApiResponse } from "../../domain/base/api-response"
 
+export interface IpesVersion {
+  id: string
+  version: number
+  data: any[]
+  createdAt: Date
+  isApproved: boolean
+  notes?: string
+}
+
 interface DocumentStore {
   steps: MainStep[]
   currentStepIndex: number
@@ -63,6 +72,16 @@ interface DocumentStore {
   cancelStep: (stepKey: string) => void
 
   updateEsquemaCurso: (esquemaCurso: any) => void
+  updateIpesData: (ipesData: any[]) => void
+
+  ipesVersions: IpesVersion[]
+  currentIpesVersionId: string | null
+  addIpesVersion: (data: any[], notes?: string) => string
+  updateIpesVersion: (versionId: string, data: any[]) => void
+  approveIpesVersion: (versionId: string) => void
+  setCurrentIpesVersion: (versionId: string) => void
+  getCurrentIpesVersion: () => IpesVersion | undefined
+  deleteIpesVersion: (versionId: string) => void
 }
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
@@ -180,6 +199,78 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       }
       return { steps: newSteps }
     }),
+
+  updateIpesData: (ipesData) =>
+    set((state) => {
+      const newSteps = [...state.steps]
+      if (newSteps[2]?.miniSteps[0]) {
+        newSteps[2].miniSteps[0] = {
+          ...newSteps[2].miniSteps[0],
+          data: {
+            ...newSteps[2].miniSteps[0].data,
+            ipes: ipesData,
+          },
+        }
+      }
+      return { steps: newSteps }
+    }),
+
+  ipesVersions: [],
+  currentIpesVersionId: null,
+
+  addIpesVersion: (data, notes) => {
+    const state = get()
+    const newVersion: IpesVersion = {
+      id: `v${Date.now()}`,
+      version: state.ipesVersions.length + 1,
+      data: JSON.parse(JSON.stringify(data)), // Deep clone
+      createdAt: new Date(),
+      isApproved: false,
+      notes,
+    }
+    set((state) => ({
+      ipesVersions: [...state.ipesVersions, newVersion],
+      currentIpesVersionId: newVersion.id,
+    }))
+    return newVersion.id
+  },
+
+  updateIpesVersion: (versionId, data) => {
+    set((state) => ({
+      ipesVersions: state.ipesVersions.map((v) =>
+        v.id === versionId ? { ...v, data: JSON.parse(JSON.stringify(data)) } : v,
+      ),
+    }))
+  },
+
+  approveIpesVersion: (versionId) => {
+    set((state) => ({
+      ipesVersions: state.ipesVersions.map((v) => (v.id === versionId ? { ...v, isApproved: true } : v)),
+    }))
+  },
+
+  setCurrentIpesVersion: (versionId) => {
+    set({ currentIpesVersionId: versionId })
+  },
+
+  getCurrentIpesVersion: () => {
+    const state = get()
+    return state.ipesVersions.find((v) => v.id === state.currentIpesVersionId)
+  },
+
+  deleteIpesVersion: (versionId) => {
+    set((state) => {
+      const filteredVersions = state.ipesVersions.filter((v) => v.id !== versionId)
+      const newCurrentId =
+        state.currentIpesVersionId === versionId
+          ? filteredVersions[filteredVersions.length - 1]?.id || null
+          : state.currentIpesVersionId
+      return {
+        ipesVersions: filteredVersions,
+        currentIpesVersionId: newCurrentId,
+      }
+    })
+  },
 
   // Navegación
   setCurrentStepIndex: (index) => set({ currentStepIndex: index }),

@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import {
   Table,
   TableBody,
@@ -14,9 +16,21 @@ import {
   DialogBody,
   DialogTitle,
   DialogContent,
+  Skeleton,
+  SkeletonItem,
+  Input,
 } from "@fluentui/react-components"
 import { exportIpesToExcel } from "../utils/export-excel"
-import { ArrowDownload20Regular, ChevronDown20Regular, ChevronRight20Regular } from "@fluentui/react-icons"
+import {
+  ArrowDownload20Regular,
+  ChevronDown20Regular,
+  ChevronRight20Regular,
+  Edit20Regular,
+  Save20Regular,
+  Dismiss20Regular,
+} from "@fluentui/react-icons"
+import { useDocumentStore } from "../../infrastructure/store/document-store"
+import { IpesVersionManager } from "./ipes-version-manager"
 
 export function IpesTable({ ipes }: { ipes: any[] }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -30,7 +44,141 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
   const [expandedPresentaciones, setExpandedPresentaciones] = useState<Set<string>>(new Set())
   const [expandedEjercicios, setExpandedEjercicios] = useState<Set<string>>(new Set())
 
-  const unidadesAgrupadas = ipes.reduce((acc: any, ipe: any) => {
+  const addIpesVersion = useDocumentStore((state) => state.addIpesVersion)
+  const updateIpesVersion = useDocumentStore((state) => state.updateIpesVersion)
+  const getCurrentIpesVersion = useDocumentStore((state) => state.getCurrentIpesVersion)
+  const currentVersionId = useDocumentStore((state) => state.currentIpesVersionId)
+
+  const currentVersion = getCurrentIpesVersion()
+  const displayIpes = currentVersion?.data || ipes
+
+  const versionInitialized = useRef(false)
+
+  useEffect(() => {
+    if (ipes && ipes.length > 0 && !currentVersionId && !versionInitialized.current) {
+      addIpesVersion(ipes, "Versión inicial")
+      versionInitialized.current = true
+    }
+  }, [ipes, currentVersionId])
+
+  // State for editing
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedIpes, setEditedIpes] = useState<any[]>([])
+  const updateIpesData = useDocumentStore((state) => state.updateIpesData)
+
+  if (!ipes || ipes.length === 0) {
+    return (
+      <div style={{ marginTop: "24px", padding: "24px" }}>
+        <Skeleton>
+          <SkeletonItem style={{ width: "100%", height: "40px", marginBottom: "16px" }} />
+          <SkeletonItem style={{ width: "100%", height: "60px", marginBottom: "12px" }} />
+          <SkeletonItem style={{ width: "100%", height: "60px", marginBottom: "12px" }} />
+          <SkeletonItem style={{ width: "100%", height: "60px", marginBottom: "12px" }} />
+          <SkeletonItem style={{ width: "100%", height: "60px", marginBottom: "12px" }} />
+          <SkeletonItem style={{ width: "100%", height: "60px" }} />
+        </Skeleton>
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "32px",
+            color: "#666",
+            fontSize: "14px",
+          }}
+        >
+          No hay datos de IPES disponibles
+        </div>
+      </div>
+    )
+  }
+
+  const handleEditClick = () => {
+    setEditedIpes(JSON.parse(JSON.stringify(displayIpes)))
+    setIsEditMode(true)
+  }
+
+  const handleSaveClick = () => {
+    updateIpesData(editedIpes)
+    if (currentVersionId) {
+      updateIpesVersion(currentVersionId, editedIpes)
+    }
+    setIsEditMode(false)
+    setEditedIpes([]) // Clear edited state after saving
+  }
+
+  const handleCancelClick = () => {
+    setEditedIpes([])
+    setIsEditMode(false)
+  }
+
+  const updateEditedField = (unidadNum: number, sesionIndex: number, path: string[], value: any) => {
+    const newEditedIpes = [...editedIpes]
+    const ipeIndex = newEditedIpes.findIndex((ipe, idx) => {
+      // Find the correct IPES object based on its original position within the grouped data
+      // This assumes the order of ipes within a unidad doesn't change, which is true for the current grouping logic.
+      const originalIpeForThisSession = Object.values(displayIpesAgrupadas)[unidadNum - 1]?.[sesionIndex]
+      return ipe === originalIpeForThisSession
+    })
+
+    if (ipeIndex >= 0) {
+      let target: any = newEditedIpes[ipeIndex]
+      for (let i = 0; i < path.length - 1; i++) {
+        if (!target[path[i]]) target[path[i]] = {} // Ensure nested objects exist
+        target = target[path[i]]
+      }
+      target[path[path.length - 1]] = value
+      setEditedIpes(newEditedIpes)
+    }
+  }
+
+  const updatePresentacionField = (
+    unidadNum: number,
+    sesionIndex: number,
+    presIndex: number,
+    field: string,
+    value: any,
+  ) => {
+    const newEditedIpes = [...editedIpes]
+    const ipeIndex = newEditedIpes.findIndex((ipe, idx) => {
+      const originalIpeForThisSession = Object.values(displayIpesAgrupadas)[unidadNum - 1]?.[sesionIndex]
+      return ipe === originalIpeForThisSession
+    })
+
+    if (ipeIndex >= 0 && newEditedIpes[ipeIndex].presentaciones && newEditedIpes[ipeIndex].presentaciones[presIndex]) {
+      newEditedIpes[ipeIndex].presentaciones[presIndex][field] = value
+      setEditedIpes(newEditedIpes)
+    }
+  }
+
+  const updateEjerciciosField = (unidadNum: number, sesionIndex: number, field: string, value: any) => {
+    const newEditedIpes = [...editedIpes]
+    const ipeIndex = newEditedIpes.findIndex((ipe, idx) => {
+      const originalIpeForThisSession = Object.values(displayIpesAgrupadas)[unidadNum - 1]?.[sesionIndex]
+      return ipe === originalIpeForThisSession
+    })
+
+    if (ipeIndex >= 0 && newEditedIpes[ipeIndex].ejercicios) {
+      newEditedIpes[ipeIndex].ejercicios[field] = value
+      setEditedIpes(newEditedIpes)
+    }
+  }
+
+  const updateIntroduccionField = (unidadNum: number, sesionIndex: number, field: string, value: any) => {
+    const newEditedIpes = [...editedIpes]
+    const ipeIndex = newEditedIpes.findIndex((ipe, idx) => {
+      const originalIpeForThisSession = Object.values(displayIpesAgrupadas)[unidadNum - 1]?.[sesionIndex]
+      return ipe === originalIpeForThisSession
+    })
+
+    if (ipeIndex >= 0 && newEditedIpes[ipeIndex].introduccion) {
+      newEditedIpes[ipeIndex].introduccion[field] = value
+      setEditedIpes(newEditedIpes)
+    }
+  }
+
+  const dataToDisplay = isEditMode ? editedIpes : displayIpes
+
+  // Re-group data based on potentially edited data
+  const displayIpesAgrupadas = dataToDisplay.reduce((acc: any, ipe: any) => {
     const unidadNum = ipe.unidad
     if (!acc[unidadNum]) {
       acc[unidadNum] = []
@@ -49,42 +197,46 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
     setExpandedUnidades(newExpanded)
   }
 
-  const toggleSesion = (sesionId: string) => {
+  // Changed from sesionId to generic key
+  const toggleSesion = (key: string) => {
     const newExpanded = new Set(expandedSesiones)
-    if (newExpanded.has(sesionId)) {
-      newExpanded.delete(sesionId)
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key)
     } else {
-      newExpanded.add(sesionId)
+      newExpanded.add(key)
     }
     setExpandedSesiones(newExpanded)
   }
 
-  const toggleIntroduccion = (sesionId: string) => {
+  // Changed from sesionId to generic key
+  const toggleIntroduccion = (key: string) => {
     const newExpanded = new Set(expandedIntroduccion)
-    if (newExpanded.has(sesionId)) {
-      newExpanded.delete(sesionId)
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key)
     } else {
-      newExpanded.add(sesionId)
+      newExpanded.add(key)
     }
     setExpandedIntroduccion(newExpanded)
   }
 
-  const togglePresentaciones = (sesionId: string) => {
+  // Changed from sesionId to generic key
+  const togglePresentaciones = (key: string) => {
     const newExpanded = new Set(expandedPresentaciones)
-    if (newExpanded.has(sesionId)) {
-      newExpanded.delete(sesionId)
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key)
     } else {
-      newExpanded.add(sesionId)
+      newExpanded.add(key)
     }
     setExpandedPresentaciones(newExpanded)
   }
 
-  const toggleEjercicios = (sesionId: string) => {
+  // Changed from sesionId to generic key
+  const toggleEjercicios = (key: string) => {
     const newExpanded = new Set(expandedEjercicios)
-    if (newExpanded.has(sesionId)) {
-      newExpanded.delete(sesionId)
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key)
     } else {
-      newExpanded.add(sesionId)
+      newExpanded.add(key)
     }
     setExpandedEjercicios(newExpanded)
   }
@@ -97,7 +249,7 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
   }
 
   const handleExport = () => {
-    exportIpesToExcel(ipes)
+    exportIpesToExcel(dataToDisplay)
   }
 
   interface RenderDetalleActividadProps {
@@ -118,10 +270,109 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
     )
   }
 
+  const renderEditableCell = (value: any, onEdit: (newValue: string) => void, isEditable = true, multiline = false) => {
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onEdit(e.target.value)
+      // Auto-resize textarea to fit content
+      e.target.style.height = "auto"
+      e.target.style.height = e.target.scrollHeight + "px"
+    }
+
+    if (isEditMode && isEditable) {
+      if (multiline) {
+        return (
+          <textarea
+            value={value || ""}
+            onChange={handleTextareaChange}
+            onFocus={(e) => {
+              // Auto-resize on focus
+              e.target.style.height = "auto"
+              e.target.style.height = e.target.scrollHeight + "px"
+            }}
+            style={{
+              width: "100%",
+              minWidth: "400px",
+              maxWidth: "800px",
+              minHeight: "80px",
+              maxHeight: "400px",
+              padding: "10px",
+              fontFamily: "inherit",
+              fontSize: "13px",
+              lineHeight: "1.5",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              resize: "vertical",
+              overflow: "auto",
+            }}
+          />
+        )
+      }
+      return (
+        <Input
+          value={value || ""}
+          onChange={(e, data) => onEdit(data.value)}
+          style={{ width: "100%", minWidth: "200px", maxWidth: "500px" }}
+        />
+      )
+    }
+    return <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{value}</span>
+  }
+
+  const renderField = (
+    label: string,
+    value: any,
+    onEdit: (newValue: string) => void,
+    isEditable = true,
+    isLargeField = false,
+  ) => {
+    const isLargeAndEditing = isLargeField && isEditMode && isEditable
+
+    if (isLargeAndEditing) {
+      // Large fields when editing: label above, field below
+      return (
+        <div style={{ marginBottom: "16px" }}>
+          <strong>{label}:</strong>
+          <div style={{ marginTop: "8px" }}>{renderEditableCell(value, onEdit, isEditable, true)}</div>
+        </div>
+      )
+    } else {
+      // All other cases: label and field on same line
+      return (
+        <p style={{ marginBottom: "12px", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+          <strong style={{ minWidth: "150px", flexShrink: 0 }}>{label}:</strong>
+          <span style={{ flex: 1 }}>{renderEditableCell(value, onEdit, isEditable, isLargeField)}</span>
+        </p>
+      )
+    }
+  }
+
   return (
     <div style={{ marginTop: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
-        <Button appearance="primary" style={{ background: "#107c10", color: "white" }} icon={<ArrowDownload20Regular />} onClick={handleExport}>
+      <IpesVersionManager />
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {!isEditMode ? (
+            <Button appearance="primary" icon={<Edit20Regular />} onClick={handleEditClick}>
+              Editar
+            </Button>
+          ) : (
+            <>
+              <Button appearance="primary" icon={<Save20Regular />} onClick={handleSaveClick}>
+                Guardar
+              </Button>
+              <Button icon={<Dismiss20Regular />} onClick={handleCancelClick}>
+                Cancelar
+              </Button>
+            </>
+          )}
+        </div>
+        <Button
+          appearance="primary"
+          icon={<ArrowDownload20Regular />}
+          onClick={handleExport}
+          style={{ background: "#107c10", color: "white" }}
+        >
           Exportar a Excel
         </Button>
       </div>
@@ -137,11 +388,12 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
           </TableHeader>
 
           <TableBody>
-            {Object.keys(unidadesAgrupadas)
+            {Object.keys(displayIpesAgrupadas)
               .sort((a, b) => Number(a) - Number(b))
               .map((unidadKey) => {
                 const unidadNum = Number(unidadKey)
-                const sesiones = unidadesAgrupadas[unidadKey]
+                // Get the sessions for the current unit from the dataToDisplay
+                const sesiones = displayIpesAgrupadas[unidadKey] || []
                 const isExpanded = expandedUnidades.has(unidadNum)
 
                 return (
@@ -256,46 +508,78 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                       </TableCell>
                                     </TableRow>
 
-                                    {/* Contenido de Introducción expandido */}
+                                    {/* Contenido de Introducción expandido - Making introducción fields editable */}
                                     {isIntroExpanded && (
                                       <TableRow style={{ backgroundColor: "#f8f8f8" }}>
                                         <TableCell colSpan={3} style={{ paddingLeft: "96px" }}>
                                           <div style={{ fontSize: "13px", lineHeight: "1.6" }}>
-                                            <p>
-                                              <strong>Curso:</strong> {ipe.introduccion.curso}
-                                            </p>
-                                            <p>
-                                              <strong>Logro de Aprendizaje del Curso:</strong>{" "}
-                                              {ipe.introduccion.logro_de_aprendizaje_curso}
-                                            </p>
-                                            <p>
-                                              <strong>Horas Semanales:</strong>{" "}
-                                              {ipe.introduccion.horas_de_estudio_semanales}
-                                            </p>
-                                            <p>
-                                              <strong>Logro de la Unidad:</strong>{" "}
-                                              {ipe.introduccion.logro_de_aprendizaje_unidad}
-                                            </p>
-                                            <p>
-                                              <strong>Importancia del Logro:</strong>{" "}
-                                              {ipe.introduccion.importancia_del_logro}
-                                            </p>
-                                            <p>
-                                              <strong>Situación Inicial:</strong> {ipe.introduccion.situacion_inicial}
-                                            </p>
-                                            <p>
-                                              <strong>Propósito de la SI:</strong> {ipe.introduccion.proposito_de_la_si}
-                                            </p>
-                                            <p>
-                                              <strong>Pregunta Cuestionadora:</strong>{" "}
-                                              {ipe.introduccion.pregunta_cuestionadora}
-                                            </p>
-                                            <p>
-                                              <strong>Tipo Recurso:</strong> {ipe.introduccion.tipo_recurso}
-                                            </p>
-                                            <p>
-                                              <strong>Tiempo Estimado:</strong> {ipe.introduccion.tiempo_estimado} min
-                                            </p>
+                                            {renderField("Curso", ipe.introduccion.curso, () => {}, false)}
+                                            {renderField(
+                                              "Logro de Aprendizaje del Curso",
+                                              ipe.introduccion.logro_de_aprendizaje_curso,
+                                              (value) =>
+                                                updateIntroduccionField(
+                                                  unidadNum,
+                                                  index,
+                                                  "logro_de_aprendizaje_curso",
+                                                  value,
+                                                ),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Horas Semanales",
+                                              ipe.introduccion.horas_de_estudio_semanales,
+                                              (value) =>
+                                                updateIntroduccionField(
+                                                  unidadNum,
+                                                  index,
+                                                  "horas_de_estudio_semanales",
+                                                  value,
+                                                ),
+                                            )}
+                                            {renderField(
+                                              "Logro de la Semana",
+                                              ipe.introduccion.logro_de_la_semana,
+                                              (value) =>
+                                                updateIntroduccionField(unidadNum, index, "logro_de_la_semana", value),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Situación Inicial",
+                                              ipe.introduccion.situacion_inicial,
+                                              (value) =>
+                                                updateIntroduccionField(unidadNum, index, "situacion_inicial", value),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Propósito de la Sesión",
+                                              ipe.introduccion.proposito_de_la_sesion,
+                                              (value) =>
+                                                updateIntroduccionField(
+                                                  unidadNum,
+                                                  index,
+                                                  "proposito_de_la_sesion",
+                                                  value,
+                                                ),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Conocimientos Previos",
+                                              ipe.introduccion.conocimientos_previos,
+                                              (value) =>
+                                                updateIntroduccionField(
+                                                  unidadNum,
+                                                  index,
+                                                  "conocimientos_previos",
+                                                  value,
+                                                ),
+                                              true,
+                                              true,
+                                            )}
                                           </div>
                                         </TableCell>
                                       </TableRow>
@@ -303,7 +587,7 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                   </>
                                 )}
 
-                                {/* Presentaciones */}
+                                {/* Presentaciones - ALL FIELDS EDITABLE */}
                                 {ipe.presentaciones && ipe.presentaciones.length > 0 && (
                                   <>
                                     <TableRow
@@ -348,7 +632,6 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                       </TableCell>
                                     </TableRow>
 
-                                    {/* Contenido de Presentaciones expandido */}
                                     {isPresExpanded && (
                                       <TableRow style={{ backgroundColor: "#f8f8f8" }}>
                                         <TableCell colSpan={3} style={{ paddingLeft: "96px" }}>
@@ -357,31 +640,115 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                               <div
                                                 key={idx}
                                                 style={{
-                                                  marginBottom: "16px",
+                                                  marginBottom: "24px",
                                                   paddingBottom: "16px",
                                                   borderBottom:
                                                     idx < ipe.presentaciones.length - 1 ? "1px solid #e0e0e0" : "none",
                                                 }}
                                               >
-                                                <p style={{ fontWeight: 600 }}>Presentación {idx + 1}</p>
-                                                <p>
-                                                  <strong>Tema:</strong> {pres.tema}
+                                                <p style={{ fontWeight: 600, marginBottom: "12px" }}>
+                                                  Presentación {idx + 1}
                                                 </p>
-                                                <p>
-                                                  <strong>Subtema:</strong> {pres.subtema}
+
+                                                <p style={{ marginBottom: "8px" }}>
+                                                  <strong>Tema:</strong>{" "}
+                                                  {renderEditableCell(
+                                                    pres.tema,
+                                                    (value) =>
+                                                      updatePresentacionField(unidadNum, index, idx, "tema", value),
+                                                    true,
+                                                  )}
                                                 </p>
-                                                <p>
-                                                  <strong>Propósito:</strong> {pres.proposito_del_recurso}
+
+                                                <p style={{ marginBottom: "8px" }}>
+                                                  <strong>Subtema:</strong>{" "}
+                                                  {renderEditableCell(
+                                                    pres.subtema,
+                                                    (value) =>
+                                                      updatePresentacionField(unidadNum, index, idx, "subtema", value),
+                                                    true,
+                                                  )}
                                                 </p>
-                                                <p>
-                                                  <strong>Tipo Recurso:</strong> {pres.tipo_recurso}
+
+                                                <p style={{ marginBottom: "8px" }}>
+                                                  <strong>Apartado:</strong>{" "}
+                                                  {renderEditableCell(
+                                                    pres.apartado || "",
+                                                    (value) =>
+                                                      updatePresentacionField(unidadNum, index, idx, "apartado", value),
+                                                    true,
+                                                  )}
                                                 </p>
-                                                <p>
-                                                  <strong>Tiempo Estimado:</strong> {pres.tiempo_estimado}
+
+                                                <p style={{ marginBottom: "8px" }}>
+                                                  <strong>Tipo Recurso:</strong>{" "}
+                                                  {renderEditableCell(
+                                                    pres.tipo_recurso,
+                                                    (value) =>
+                                                      updatePresentacionField(
+                                                        unidadNum,
+                                                        index,
+                                                        idx,
+                                                        "tipo_recurso",
+                                                        value,
+                                                      ),
+                                                    true,
+                                                  )}
                                                 </p>
-                                                <p>
-                                                  <strong>Detalles:</strong> {pres.detalles_del_recurso}
+
+                                                <p style={{ marginBottom: "8px" }}>
+                                                  <strong>Tiempo Estimado:</strong>{" "}
+                                                  {renderEditableCell(
+                                                    pres.tiempo_estimado,
+                                                    (value) =>
+                                                      updatePresentacionField(
+                                                        unidadNum,
+                                                        index,
+                                                        idx,
+                                                        "tiempo_estimado",
+                                                        value,
+                                                      ),
+                                                    true,
+                                                  )}
                                                 </p>
+
+                                                <div style={{ marginBottom: "12px" }}>
+                                                  <strong>Propósito del Recurso:</strong>
+                                                  <div style={{ marginTop: "8px" }}>
+                                                    {renderEditableCell(
+                                                      pres.proposito_del_recurso,
+                                                      (value) =>
+                                                        updatePresentacionField(
+                                                          unidadNum,
+                                                          index,
+                                                          idx,
+                                                          "proposito_del_recurso",
+                                                          value,
+                                                        ),
+                                                      true,
+                                                      true,
+                                                    )}
+                                                  </div>
+                                                </div>
+
+                                                <div style={{ marginBottom: "12px" }}>
+                                                  <strong>Detalles del Recurso:</strong>
+                                                  <div style={{ marginTop: "8px" }}>
+                                                    {renderEditableCell(
+                                                      pres.detalles_del_recurso,
+                                                      (value) =>
+                                                        updatePresentacionField(
+                                                          unidadNum,
+                                                          index,
+                                                          idx,
+                                                          "detalles_del_recurso",
+                                                          value,
+                                                        ),
+                                                      true,
+                                                      true,
+                                                    )}
+                                                  </div>
+                                                </div>
                                               </div>
                                             ))}
                                           </div>
@@ -391,7 +758,6 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                   </>
                                 )}
 
-                                {/* Ejercicios */}
                                 {ipe.ejercicios && (
                                   <>
                                     <TableRow
@@ -436,28 +802,49 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                       </TableCell>
                                     </TableRow>
 
-                                    {/* Contenido de Ejercicios expandido */}
+                                    {/* Contenido de Ejercicios expandido - Making all ejercicios fields editable */}
                                     {isEjerExpanded && (
                                       <TableRow style={{ backgroundColor: "#f8f8f8" }}>
                                         <TableCell colSpan={3} style={{ paddingLeft: "96px" }}>
                                           <div style={{ fontSize: "13px", lineHeight: "1.6" }}>
-                                            <p>
-                                              <strong>Tema:</strong> {ipe.ejercicios.tema}
-                                            </p>
-                                            <p>
-                                              <strong>Subtemas:</strong>
-                                            </p>
-                                            <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
-                                              {ipe.ejercicios.subtemas?.map((sub: string, idx: number) => (
-                                                <li key={idx}>{sub}</li>
-                                              ))}
-                                            </ul>
-                                            <p>
-                                              <strong>Código Actividad:</strong> {ipe.ejercicios.codigo_actividad}
-                                            </p>
-                                            <p>
-                                              <strong>Tipo Actividad:</strong> {ipe.ejercicios.tipo_actividad}
-                                            </p>
+                                            {renderField(
+                                              "Código Actividad",
+                                              ipe.ejercicios.codigo_actividad,
+                                              () => {},
+                                              false,
+                                            )}
+                                            {renderField(
+                                              "Tipo Actividad",
+                                              ipe.ejercicios.tipo_actividad,
+                                              () => {},
+                                              false,
+                                            )}
+                                            {renderField("Tema", ipe.ejercicios.tema, (value) =>
+                                              updateEjerciciosField(unidadNum, index, "tema", value),
+                                            )}
+                                            {renderField("Subtemas", ipe.ejercicios.subtemas, (value) =>
+                                              updateEjerciciosField(unidadNum, index, "subtemas", value),
+                                            )}
+                                            {renderField(
+                                              "Propósito de la Actividad",
+                                              ipe.ejercicios.proposito_actividad,
+                                              (value) =>
+                                                updateEjerciciosField(unidadNum, index, "proposito_actividad", value),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Detalle de la Actividad",
+                                              Array.isArray(ipe.ejercicios.detalle_actividad)
+                                                ? ipe.ejercicios.detalle_actividad.join("\n")
+                                                : ipe.ejercicios.detalle_actividad,
+                                              (value) => {
+                                                const newValue = value.split("\n").filter((line: string) => line.trim())
+                                                updateEjerciciosField(unidadNum, index, "detalle_actividad", newValue)
+                                              },
+                                              true,
+                                              true,
+                                            )}
                                           </div>
                                         </TableCell>
                                       </TableRow>
@@ -557,6 +944,12 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                             <TableHeaderCell>Subtema</TableHeaderCell>
                             <TableCell style={{ whiteSpace: "pre-wrap" }}>{pres.subtema}</TableCell>
                           </TableRow>
+                          {pres.apartado && (
+                            <TableRow>
+                              <TableHeaderCell>Apartado</TableHeaderCell>
+                              <TableCell style={{ whiteSpace: "pre-wrap" }}>{pres.apartado}</TableCell>
+                            </TableRow>
+                          )}
                           <TableRow>
                             <TableHeaderCell>Propósito</TableHeaderCell>
                             <TableCell style={{ whiteSpace: "pre-wrap" }}>{pres.proposito_del_recurso}</TableCell>

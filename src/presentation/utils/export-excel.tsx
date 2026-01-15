@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx"
 
-export function exportIpesToExcel(ipes: any[]) {
+export function exportIpesToExcel(ipes: any[], courseName?: string) {
   const workbook = XLSX.utils.book_new()
 
   // Hoja 1: Resumen General
@@ -14,6 +14,10 @@ export function exportIpesToExcel(ipes: any[]) {
   }))
 
   const resumenSheet = XLSX.utils.json_to_sheet(resumenData)
+  if (courseName) {
+    XLSX.utils.sheet_add_aoa(resumenSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+    XLSX.utils.sheet_add_json(resumenSheet, resumenData, { origin: "A3", skipHeader: false })
+  }
   XLSX.utils.book_append_sheet(workbook, resumenSheet, "Resumen IPES")
 
   // Hoja 2: Introducciones Completas
@@ -38,6 +42,10 @@ export function exportIpesToExcel(ipes: any[]) {
 
   if (introduccionData.length > 0) {
     const introduccionSheet = XLSX.utils.json_to_sheet(introduccionData)
+    if (courseName) {
+      XLSX.utils.sheet_add_aoa(introduccionSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+      XLSX.utils.sheet_add_json(introduccionSheet, introduccionData, { origin: "A3", skipHeader: false })
+    }
     XLSX.utils.book_append_sheet(workbook, introduccionSheet, "Introducciones")
   }
 
@@ -52,6 +60,7 @@ export function exportIpesToExcel(ipes: any[]) {
           "Presentación #": idx + 1,
           Tema: pres.tema,
           Subtema: pres.subtema,
+          Apartado: pres.apartado || "N/A",
           "Propósito del Recurso": pres.proposito_del_recurso,
           "Tipo Recurso": pres.tipo_recurso,
           "Tiempo Estimado": pres.tiempo_estimado,
@@ -63,6 +72,10 @@ export function exportIpesToExcel(ipes: any[]) {
 
   if (presentacionesData.length > 0) {
     const presentacionesSheet = XLSX.utils.json_to_sheet(presentacionesData)
+    if (courseName) {
+      XLSX.utils.sheet_add_aoa(presentacionesSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+      XLSX.utils.sheet_add_json(presentacionesSheet, presentacionesData, { origin: "A3", skipHeader: false })
+    }
     XLSX.utils.book_append_sheet(workbook, presentacionesSheet, "Presentaciones")
   }
 
@@ -84,13 +97,20 @@ export function exportIpesToExcel(ipes: any[]) {
 
   if (ejerciciosData.length > 0) {
     const ejerciciosSheet = XLSX.utils.json_to_sheet(ejerciciosData)
+    if (courseName) {
+      XLSX.utils.sheet_add_aoa(ejerciciosSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+      XLSX.utils.sheet_add_json(ejerciciosSheet, ejerciciosData, { origin: "A3", skipHeader: false })
+    }
     XLSX.utils.book_append_sheet(workbook, ejerciciosSheet, "Ejercicios")
   }
 
   // Hoja 5: Vista Completa (todo en una fila por unidad)
   const completaData = ipes.map((ipe) => {
     const presentacionesSummary = ipe.presentaciones
-      ?.map((p: any, idx: number) => `[P${idx + 1}] ${p.tema} - ${p.subtema}`)
+      ?.map((p: any, idx: number) => {
+        const apartadoText = p.apartado ? ` (${p.apartado})` : ""
+        return `[P${idx + 1}] ${p.tema} - ${p.subtema}${apartadoText}`
+      })
       .join(" | ")
 
     const ejerciciosDetalle = ipe.ejercicios
@@ -132,14 +152,23 @@ export function exportIpesToExcel(ipes: any[]) {
   })
 
   const completaSheet = XLSX.utils.json_to_sheet(completaData)
+  if (courseName) {
+    XLSX.utils.sheet_add_aoa(completaSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+    XLSX.utils.sheet_add_json(completaSheet, completaData, { origin: "A3", skipHeader: false })
+  }
   XLSX.utils.book_append_sheet(workbook, completaSheet, "Vista Completa")
 
   // Descargar archivo
-  XLSX.writeFile(workbook, `IPES_Completo_${new Date().toISOString().split("T")[0]}.xlsx`)
+  const fileName = courseName
+    ? `IPES_${courseName.substring(0, 30).replace(/[^\w\s]/gi, "")}_${new Date().toISOString().split("T")[0]}.xlsx`
+    : `IPES_Completo_${new Date().toISOString().split("T")[0]}.xlsx`
+  XLSX.writeFile(workbook, fileName)
 }
 
 export function exportEsquemaCursoToExcel(esquemaCurso: any) {
   const workbook = XLSX.utils.book_new()
+
+  const courseName = esquemaCurso.curso || "N/A"
 
   // Hoja 1: Información General del Curso
   const infoGeneralData = [
@@ -149,7 +178,7 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
     },
     {
       Campo: "Nombre del Curso",
-      Valor: esquemaCurso.curso || "N/A",
+      Valor: courseName,
     },
     {
       Campo: "Contexto del Curso",
@@ -170,6 +199,8 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
   }))
 
   const unidadesSheet = XLSX.utils.json_to_sheet(unidadesData)
+  XLSX.utils.sheet_add_aoa(unidadesSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+  XLSX.utils.sheet_add_json(unidadesSheet, unidadesData, { origin: "A3", skipHeader: false })
   XLSX.utils.book_append_sheet(workbook, unidadesSheet, "Unidades")
 
   // Hoja 3: Semanas
@@ -188,6 +219,8 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
   })
 
   const semanasSheet = XLSX.utils.json_to_sheet(semanasData)
+  XLSX.utils.sheet_add_aoa(semanasSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+  XLSX.utils.sheet_add_json(semanasSheet, semanasData, { origin: "A3", skipHeader: false })
   XLSX.utils.book_append_sheet(workbook, semanasSheet, "Semanas")
 
   // Hoja 4: Temas
@@ -209,6 +242,8 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
   })
 
   const temasSheet = XLSX.utils.json_to_sheet(temasData)
+  XLSX.utils.sheet_add_aoa(temasSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+  XLSX.utils.sheet_add_json(temasSheet, temasData, { origin: "A3", skipHeader: false })
   XLSX.utils.book_append_sheet(workbook, temasSheet, "Temas")
 
   // Hoja 5: Subtemas
@@ -231,6 +266,8 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
   })
 
   const subtemasSheet = XLSX.utils.json_to_sheet(subtemasData)
+  XLSX.utils.sheet_add_aoa(subtemasSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+  XLSX.utils.sheet_add_json(subtemasSheet, subtemasData, { origin: "A3", skipHeader: false })
   XLSX.utils.book_append_sheet(workbook, subtemasSheet, "Subtemas")
 
   // Hoja 6: Apartados (Detalle completo)
@@ -256,6 +293,8 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
 
   if (apartadosData.length > 0) {
     const apartadosSheet = XLSX.utils.json_to_sheet(apartadosData)
+    XLSX.utils.sheet_add_aoa(apartadosSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+    XLSX.utils.sheet_add_json(apartadosSheet, apartadosData, { origin: "A3", skipHeader: false })
     XLSX.utils.book_append_sheet(workbook, apartadosSheet, "Apartados")
   }
 
@@ -267,7 +306,7 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
         tema.subtemas?.forEach((subtema: any) => {
           completaData.push({
             "Código Curso": esquemaCurso.cod_curso || "N/A",
-            Curso: esquemaCurso.curso || "N/A",
+            Curso: courseName,
             Unidad: unidad.numero_unidad,
             "Título Unidad": unidad.titulo_unidad || "N/A",
             "Logro Unidad": unidad.logro_de_aprendizaje_unidad,
@@ -286,14 +325,16 @@ export function exportEsquemaCursoToExcel(esquemaCurso: any) {
   })
 
   const completaSheet = XLSX.utils.json_to_sheet(completaData)
+  XLSX.utils.sheet_add_aoa(completaSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+  XLSX.utils.sheet_add_json(completaSheet, completaData, { origin: "A3", skipHeader: false })
   XLSX.utils.book_append_sheet(workbook, completaSheet, "Vista Completa")
 
   // Descargar archivo
-  const nombreCurso = esquemaCurso.curso?.substring(0, 30).replace(/[^\w\s]/gi, "") || "Curso"
+  const nombreCurso = courseName.substring(0, 30).replace(/[^\w\s]/gi, "") || "Curso"
   XLSX.writeFile(workbook, `${nombreCurso}_${new Date().toISOString().split("T")[0]}.xlsx`)
 }
 
-export function exportEsquemaActividadesToExcel(esquemaActividades: any) {
+export function exportEsquemaActividadesToExcel(esquemaActividades: any, courseName?: string) {
   const workbook = XLSX.utils.book_new()
 
   // Hoja principal con todas las actividades
@@ -313,6 +354,10 @@ export function exportEsquemaActividadesToExcel(esquemaActividades: any) {
   }))
 
   const actividadesSheet = XLSX.utils.json_to_sheet(actividadesData)
+  if (courseName) {
+    XLSX.utils.sheet_add_aoa(actividadesSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+    XLSX.utils.sheet_add_json(actividadesSheet, actividadesData, { origin: "A3", skipHeader: false })
+  }
   XLSX.utils.book_append_sheet(workbook, actividadesSheet, "Actividades")
 
   // Hoja de resumen por tipo de actividad
@@ -333,10 +378,17 @@ export function exportEsquemaActividadesToExcel(esquemaActividades: any) {
       Logro: act.logro_actividad,
     }))
     const tipoSheet = XLSX.utils.json_to_sheet(tipoData)
+    if (courseName) {
+      XLSX.utils.sheet_add_aoa(tipoSheet, [[`Curso: ${courseName}`]], { origin: "A1" })
+      XLSX.utils.sheet_add_json(tipoSheet, tipoData, { origin: "A3", skipHeader: false })
+    }
     const sheetName = tipo.substring(0, 30) // Límite de longitud del nombre de hoja
     XLSX.utils.book_append_sheet(workbook, tipoSheet, sheetName)
   })
 
   // Descargar archivo
-  XLSX.writeFile(workbook, `Esquema_Actividades_${new Date().toISOString().split("T")[0]}.xlsx`)
+  const fileName = courseName
+    ? `Esquema_Actividades_${courseName.substring(0, 30).replace(/[^\w\s]/gi, "")}_${new Date().toISOString().split("T")[0]}.xlsx`
+    : `Esquema_Actividades_${new Date().toISOString().split("T")[0]}.xlsx`
+  XLSX.writeFile(workbook, fileName)
 }

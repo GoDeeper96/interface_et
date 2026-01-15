@@ -4,11 +4,12 @@ import type { IpesPayload } from "../payload/ipes.request"
 
 
 export const generarIpesUseCase = async (
-  request: IpesPayload
+  request: IpesPayload,
+   signal?: AbortSignal
 ): Promise<IpesDTO> => {
   try {
     const start = performance.now()
-    const response = await generarIpesAPI(request)
+    const response = await generarIpesAPI(request, signal)
     const end = performance.now()
     const durationMs = end - start
 

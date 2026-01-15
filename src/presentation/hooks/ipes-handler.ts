@@ -57,11 +57,9 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
         const esquemaCurso = steps[1].miniSteps[0].data.esquemaCurso
         const esquemaActividad = steps[1].miniSteps[0].data.esquemaActividad
         const kickOff = steps[0].miniSteps[1].data
-        console.log(esquemaCurso)
-        console.log(esquemaActividad)
-        console.log(kickOff)
+        
         if (!esquemaCurso || !esquemaActividad || !kickOff) {
-          console.log("sueños")
+          // console.log("sueños")
           onMessage("Faltan datos para generar IPES (esquemas o kickOff)", "error")
 
           updateMiniStep(stepIdx, miniStepIdx, {
@@ -82,7 +80,7 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
           numero_semana: formValues.numero_semana || null,
         }
         console.log("IPES Payload:", payload)
-        const apiResponse = await generarIpesUseCase(payload)
+        const apiResponse = await generarIpesUseCase(payload, abortController.signal)
 
         if (abortController.signal.aborted) {
           console.log("[v0] IPES generation was cancelled")

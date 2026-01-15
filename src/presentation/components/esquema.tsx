@@ -344,6 +344,7 @@ export function EsquemaTable({
           style={{
             width: "3px",
             height: "40px",
+              
             background: "#0078d4",
             borderRadius: "2px",
             opacity: 0.6,
@@ -358,6 +359,7 @@ export function EsquemaTable({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+          
             height: "100%",
             background: "white",
             borderRadius: "12px",
@@ -370,6 +372,7 @@ export function EsquemaTable({
               writingMode: "vertical-rl",
               textOrientation: "mixed",
               fontSize: "14px",
+              
               fontWeight: 600,
               color: "#333",
               whiteSpace: "nowrap",
@@ -386,6 +389,7 @@ export function EsquemaTable({
               justifyContent: "space-between",
               alignItems: "center",
               gap: "8px",
+              
               padding: "12px 8px 12px 16px",
               background: "white",
               borderBottom: "1px solid #e0e0e0",
@@ -427,6 +431,7 @@ export function EsquemaTable({
               flex: 1,
               overflowY: "auto",
               paddingLeft: "8px",
+              marginBottom:"4rem"
             }}
           >
             <Table>
