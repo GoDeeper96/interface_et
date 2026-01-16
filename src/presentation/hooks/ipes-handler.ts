@@ -5,7 +5,7 @@ import { generarIpesUseCase } from "../../application/usecases/generar-ipes.use-
 import { useDocumentStore } from "../../infrastructure/store/document-store"
 
 interface UseIpesHandlerProps {
-  onMessage: (text: string, type: "success" | "error") => void
+  onMessage: (text: string, type: "success" | "error" | "warning") => void
 }
 
 export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
@@ -19,10 +19,20 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
     setRequestTiming,
     setStepLoading,
     setAbortController,
+    addIpesVersion,
+    ipesVersions,
   } = useDocumentStore()
 
   const handleGenerateIpes = useCallback(
     async (stepIdx: number, miniStepIdx: number) => {
+      const stepKey = `step${stepIdx}_mini${miniStepIdx}`
+      const { stepLoadingStates } = useDocumentStore.getState()
+
+      if (stepLoadingStates[stepKey]) {
+        console.log(`[v0] IPES generation already in progress for ${stepKey}, skipping`)
+        return
+      }
+
       const { formValues } = useDocumentStore.getState()
 
       // Validación básica
@@ -36,7 +46,6 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
       }
 
       const abortController = new AbortController()
-      const stepKey = `step${stepIdx}_mini${miniStepIdx}`
 
       setAbortController(stepKey, abortController)
       setStepLoading(stepKey, true)
@@ -51,15 +60,20 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
         uploading: true,
         validationStatus: "pending",
         completed: false,
+        data: null, // Limpiar datos previos
       })
 
       try {
-        const esquemaCurso = steps[1].miniSteps[0].data.esquemaCurso
-        const esquemaActividad = steps[1].miniSteps[0].data.esquemaActividad
+        const esquemaCurso = steps[1].miniSteps[0].data?.esquemaCurso
+        const esquemaActividad = steps[1].miniSteps[0].data?.esquemaActividad
         const kickOff = steps[0].miniSteps[1].data
-        
+
+        console.log("[v0] IPES retry - esquemaCurso:", esquemaCurso)
+        console.log("[v0] IPES retry - esquemaActividad:", esquemaActividad)
+        console.log("[v0] IPES retry - kickOff:", kickOff)
+
         if (!esquemaCurso || !esquemaActividad || !kickOff) {
-          // console.log("sueños")
+          console.log("[v0] Missing required data for IPES generation")
           onMessage("Faltan datos para generar IPES (esquemas o kickOff)", "error")
 
           updateMiniStep(stepIdx, miniStepIdx, {
@@ -79,7 +93,7 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
           numero_unidad: formValues.numero_unidad || null,
           numero_semana: formValues.numero_semana || null,
         }
-        console.log("IPES Payload:", payload)
+        console.log("[v0] IPES Payload:", payload)
         const apiResponse = await generarIpesUseCase(payload, abortController.signal)
 
         if (abortController.signal.aborted) {
@@ -93,16 +107,26 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
 
         const success = apiResponse.success
 
+        console.log("[v0] IPES API Response success:", success)
+        console.log("[v0] IPES API Response data:", apiResponse.data)
+
         updateMiniStep(stepIdx, miniStepIdx, {
           uploading: false,
           completed: success,
           validationStatus: success ? "success" : "error",
-          data: apiResponse.data,
+          data: success ? apiResponse.data : null,
         })
 
         if (success) {
           updateMainStep(stepIdx, { completed: true })
           setIpesGenerated(true)
+
+          const currentVersions = useDocumentStore.getState().ipesVersions
+          if (currentVersions.length > 0 && apiResponse.data?.ipes) {
+            addIpesVersion(apiResponse.data.ipes, `Regeneración ${new Date().toLocaleString()}`)
+            console.log("[v0] New IPES version created after retry")
+          }
+
           const minutes = Math.floor(duration / 60)
           const seconds = Math.floor(duration % 60)
           onMessage(`IPES generado correctamente en ${minutes > 0 ? `${minutes}m ` : ""}${seconds}s`, "success")
@@ -153,6 +177,9 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
       setRequestTiming,
       setStepLoading,
       setAbortController,
+      setGeneratingIpes,
+      setIpesGenerated,
+      addIpesVersion,
     ],
   )
 

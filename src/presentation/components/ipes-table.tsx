@@ -48,18 +48,39 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
   const updateIpesVersion = useDocumentStore((state) => state.updateIpesVersion)
   const getCurrentIpesVersion = useDocumentStore((state) => state.getCurrentIpesVersion)
   const currentVersionId = useDocumentStore((state) => state.currentIpesVersionId)
+  const ipesVersions = useDocumentStore((state) => state.ipesVersions)
 
-  const currentVersion = getCurrentIpesVersion()
-  const displayIpes = currentVersion?.data || ipes
-
+  // Also track when ipes prop changes to create new version
   const versionInitialized = useRef(false)
+  const lastIpesRef = useRef<any[] | null>(null)
 
   useEffect(() => {
-    if (ipes && ipes.length > 0 && !currentVersionId && !versionInitialized.current) {
-      addIpesVersion(ipes, "Versión inicial")
-      versionInitialized.current = true
+    if (!ipes || ipes.length === 0) return
+
+    // Check if this is completely new data (different from what we have)
+    const ipesString = JSON.stringify(ipes)
+    const lastIpesString = lastIpesRef.current ? JSON.stringify(lastIpesRef.current) : null
+
+    if (ipesString !== lastIpesString) {
+      console.log("[v0] IPES data changed, updating...")
+      lastIpesRef.current = ipes
+
+      if (!versionInitialized.current && ipesVersions.length === 0) {
+        // First time initialization
+        addIpesVersion(ipes, "Versión inicial")
+        versionInitialized.current = true
+        console.log("[v0] Created initial IPES version")
+      } else if (versionInitialized.current && ipesVersions.length > 0) {
+        // Data changed after initial load (retry case) - create new version
+        addIpesVersion(ipes, `Regeneración ${new Date().toLocaleString()}`)
+        console.log("[v0] Created new IPES version after retry")
+      }
     }
-  }, [ipes, currentVersionId])
+  }, [ipes, ipesVersions.length, addIpesVersion])
+
+  // Use current version data if available, otherwise use props
+  const currentVersion = getCurrentIpesVersion()
+  const displayIpes = currentVersion?.data || ipes
 
   // State for editing
   const [isEditMode, setIsEditMode] = useState(false)
