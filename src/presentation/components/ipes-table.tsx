@@ -291,6 +291,59 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
     )
   }
 
+  const renderEditableTableCell = (
+    value: any,
+    onEdit: (newValue: string) => void,
+    isEditable = true,
+    multiline = false,
+  ) => {
+    if (isEditMode && isEditable) {
+      if (multiline) {
+        return (
+          <textarea
+            value={value || ""}
+            onChange={(e) => onEdit(e.target.value)}
+            style={{
+              width: "100%",
+              minWidth: "150px",
+              minHeight: "60px",
+              padding: "6px",
+              fontFamily: "inherit",
+              fontSize: "12px",
+              lineHeight: "1.4",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              resize: "vertical",
+            }}
+          />
+        )
+      }
+      return (
+        <Input
+          value={value || ""}
+          onChange={(e, data) => onEdit(data.value)}
+          size="small"
+          style={{ width: "100%", minWidth: "100px" }}
+        />
+      )
+    }
+    return (
+      <span
+        style={{
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          display: "block",
+          maxWidth: "250px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+        title={value}
+      >
+        {value}
+      </span>
+    )
+  }
+
   const renderEditableCell = (value: any, onEdit: (newValue: string) => void, isEditable = true, multiline = false) => {
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       onEdit(e.target.value)
@@ -399,11 +452,11 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
       </div>
 
       <div style={{ overflowX: "auto", width: "100%" }}>
-        <Table style={{ minWidth: "1200px" }}>
+        <Table >
           <TableHeader>
             <TableRow>
               <TableHeaderCell>Unidad / Semana / Sesión</TableHeaderCell>
-              <TableHeaderCell>Detalles</TableHeaderCell>
+              <TableHeaderCell>Logro de la Semana</TableHeaderCell>
               <TableHeaderCell style={{ textAlign: "right" }}>Acciones</TableHeaderCell>
             </TableRow>
           </TableHeader>
@@ -576,26 +629,52 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                               true,
                                             )}
                                             {renderField(
-                                              "Propósito de la Sesión",
-                                              ipe.introduccion.proposito_de_la_sesion,
+                                              "Propósito de la situación inicial",
+                                              ipe.introduccion.proposito_de_la_si,
                                               (value) =>
                                                 updateIntroduccionField(
                                                   unidadNum,
                                                   index,
-                                                  "proposito_de_la_sesion",
+                                                  "proposito_de_la_si",
                                                   value,
                                                 ),
                                               true,
                                               true,
                                             )}
                                             {renderField(
-                                              "Conocimientos Previos",
-                                              ipe.introduccion.conocimientos_previos,
+                                              "Pregunta Cuestionadora",
+                                              ipe.introduccion.pregunta_cuestionadora,
                                               (value) =>
                                                 updateIntroduccionField(
                                                   unidadNum,
                                                   index,
-                                                  "conocimientos_previos",
+                                                  "pregunta_cuestionadora",
+                                                  value,
+                                                ),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Tipo Recurso",
+                                              ipe.introduccion.tipo_recurso,
+                                              (value) =>
+                                                updateIntroduccionField(
+                                                  unidadNum,
+                                                  index,
+                                                  "tipo_recurso",
+                                                  value,
+                                                ),
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Tiempo Estimado",
+                                              ipe.introduccion.tiempo_estimado,
+                                              (value) =>
+                                                updateIntroduccionField(
+                                                  unidadNum,
+                                                  index,
+                                                  "tiempo_estimado",
                                                   value,
                                                 ),
                                               true,
@@ -608,7 +687,6 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                   </>
                                 )}
 
-                                {/* Presentaciones - ALL FIELDS EDITABLE */}
                                 {ipe.presentaciones && ipe.presentaciones.length > 0 && (
                                   <>
                                     <TableRow
@@ -655,123 +733,133 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
 
                                     {isPresExpanded && (
                                       <TableRow style={{ backgroundColor: "#f8f8f8" }}>
-                                        <TableCell colSpan={3} style={{ paddingLeft: "96px" }}>
-                                          <div style={{ fontSize: "13px", lineHeight: "1.6" }}>
-                                            {ipe.presentaciones.map((pres: any, idx: number) => (
-                                              <div
-                                                key={idx}
-                                                style={{
-                                                  marginBottom: "24px",
-                                                  paddingBottom: "16px",
-                                                  borderBottom:
-                                                    idx < ipe.presentaciones.length - 1 ? "1px solid #e0e0e0" : "none",
-                                                }}
-                                              >
-                                                <p style={{ fontWeight: 600, marginBottom: "12px" }}>
-                                                  Presentación {idx + 1}
-                                                </p>
-
-                                                <p style={{ marginBottom: "8px" }}>
-                                                  <strong>Tema:</strong>{" "}
-                                                  {renderEditableCell(
-                                                    pres.tema,
-                                                    (value) =>
-                                                      updatePresentacionField(unidadNum, index, idx, "tema", value),
-                                                    true,
-                                                  )}
-                                                </p>
-
-                                                <p style={{ marginBottom: "8px" }}>
-                                                  <strong>Subtema:</strong>{" "}
-                                                  {renderEditableCell(
-                                                    pres.subtema,
-                                                    (value) =>
-                                                      updatePresentacionField(unidadNum, index, idx, "subtema", value),
-                                                    true,
-                                                  )}
-                                                </p>
-
-                                                <p style={{ marginBottom: "8px" }}>
-                                                  <strong>Apartado:</strong>{" "}
-                                                  {renderEditableCell(
-                                                    pres.apartado || "",
-                                                    (value) =>
-                                                      updatePresentacionField(unidadNum, index, idx, "apartado", value),
-                                                    true,
-                                                  )}
-                                                </p>
-
-                                                <p style={{ marginBottom: "8px" }}>
-                                                  <strong>Tipo Recurso:</strong>{" "}
-                                                  {renderEditableCell(
-                                                    pres.tipo_recurso,
-                                                    (value) =>
-                                                      updatePresentacionField(
-                                                        unidadNum,
-                                                        index,
-                                                        idx,
-                                                        "tipo_recurso",
-                                                        value,
-                                                      ),
-                                                    true,
-                                                  )}
-                                                </p>
-
-                                                <p style={{ marginBottom: "8px" }}>
-                                                  <strong>Tiempo Estimado:</strong>{" "}
-                                                  {renderEditableCell(
-                                                    pres.tiempo_estimado,
-                                                    (value) =>
-                                                      updatePresentacionField(
-                                                        unidadNum,
-                                                        index,
-                                                        idx,
-                                                        "tiempo_estimado",
-                                                        value,
-                                                      ),
-                                                    true,
-                                                  )}
-                                                </p>
-
-                                                <div style={{ marginBottom: "12px" }}>
-                                                  <strong>Propósito del Recurso:</strong>
-                                                  <div style={{ marginTop: "8px" }}>
-                                                    {renderEditableCell(
-                                                      pres.proposito_del_recurso,
-                                                      (value) =>
-                                                        updatePresentacionField(
-                                                          unidadNum,
-                                                          index,
-                                                          idx,
-                                                          "proposito_del_recurso",
-                                                          value,
-                                                        ),
-                                                      true,
-                                                      true,
-                                                    )}
-                                                  </div>
-                                                </div>
-
-                                                <div style={{ marginBottom: "12px" }}>
-                                                  <strong>Detalles del Recurso:</strong>
-                                                  <div style={{ marginTop: "8px" }}>
-                                                    {renderEditableCell(
-                                                      pres.detalles_del_recurso,
-                                                      (value) =>
-                                                        updatePresentacionField(
-                                                          unidadNum,
-                                                          index,
-                                                          idx,
-                                                          "detalles_del_recurso",
-                                                          value,
-                                                        ),
-                                                      true,
-                                                      true,
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            ))}
+                                        <TableCell colSpan={3} style={{ paddingLeft: "96px", paddingRight: "24px" }}>
+                                          <div style={{ overflowX: "auto" }}>
+                                            <Table size="small" style={{ minWidth: "900px" }}>
+                                              <TableHeader>
+                                                <TableRow>
+                                                  <TableHeaderCell style={{ width: "40px" }}>#</TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "150px" }}>Tema</TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "150px" }}>
+                                                    Subtema
+                                                  </TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "120px" }}>
+                                                    Apartado
+                                                  </TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "100px" }}>
+                                                    Tipo Recurso
+                                                  </TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "80px" }}>Tiempo</TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "200px" }}>
+                                                    Propósito 
+                                                  </TableHeaderCell>
+                                                  <TableHeaderCell style={{ minWidth: "200px" }}>
+                                                    Detalles
+                                                  </TableHeaderCell>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {ipe.presentaciones.map((pres: any, idx: number) => (
+                                                  <TableRow key={idx}>
+                                                    <TableCell style={{ fontWeight: 600 }}>{idx + 1}</TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.tema,
+                                                        (value) =>
+                                                          updatePresentacionField(unidadNum, index, idx, "tema", value),
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.subtema,
+                                                        (value) =>
+                                                          updatePresentacionField(
+                                                            unidadNum,
+                                                            index,
+                                                            idx,
+                                                            "subtema",
+                                                            value,
+                                                          ),
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.apartado || "",
+                                                        (value) =>
+                                                          updatePresentacionField(
+                                                            unidadNum,
+                                                            index,
+                                                            idx,
+                                                            "apartado",
+                                                            value,
+                                                          ),
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.tipo_recurso,
+                                                        (value) =>
+                                                          updatePresentacionField(
+                                                            unidadNum,
+                                                            index,
+                                                            idx,
+                                                            "tipo_recurso",
+                                                            value,
+                                                          ),
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.tiempo_estimado,
+                                                        (value) =>
+                                                          updatePresentacionField(
+                                                            unidadNum,
+                                                            index,
+                                                            idx,
+                                                            "tiempo_estimado",
+                                                            value,
+                                                          ),
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.proposito_del_recurso,
+                                                        (value) =>
+                                                          updatePresentacionField(
+                                                            unidadNum,
+                                                            index,
+                                                            idx,
+                                                            "proposito_del_recurso",
+                                                            value,
+                                                          ),
+                                                        true,
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {renderEditableTableCell(
+                                                        pres.detalles_del_recurso,
+                                                        (value) =>
+                                                          updatePresentacionField(
+                                                            unidadNum,
+                                                            index,
+                                                            idx,
+                                                            "detalles_del_recurso",
+                                                            value,
+                                                          ),
+                                                        true,
+                                                        true,
+                                                      )}
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                              </TableBody>
+                                            </Table>
                                           </div>
                                         </TableCell>
                                       </TableRow>
@@ -840,12 +928,12 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                               () => {},
                                               false,
                                             )}
-                                            {renderField("Tema", ipe.ejercicios.tema, (value) =>
+                                            {/* {renderField("Tema", ipe.ejercicios.tema, (value) =>
                                               updateEjerciciosField(unidadNum, index, "tema", value),
                                             )}
                                             {renderField("Subtemas", ipe.ejercicios.subtemas, (value) =>
                                               updateEjerciciosField(unidadNum, index, "subtemas", value),
-                                            )}
+                                            )} */}
                                             {renderField(
                                               "Propósito de la Actividad",
                                               ipe.ejercicios.proposito_actividad,
@@ -863,6 +951,14 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                                                 const newValue = value.split("\n").filter((line: string) => line.trim())
                                                 updateEjerciciosField(unidadNum, index, "detalle_actividad", newValue)
                                               },
+                                              true,
+                                              true,
+                                            )}
+                                            {renderField(
+                                              "Tiempo Actividad",
+                                              ipe.ejercicios.tiempo_actividad,
+                                              (value) =>
+                                                updateEjerciciosField(unidadNum, index, "tiempo_actividad", value),
                                               true,
                                               true,
                                             )}
@@ -998,7 +1094,7 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                 <div>
                   <Table>
                     <TableBody>
-                      <TableRow>
+                      {/* <TableRow>
                         <TableHeaderCell>Tema</TableHeaderCell>
                         <TableCell style={{ whiteSpace: "pre-wrap" }}>{modalData.tema}</TableCell>
                       </TableRow>
@@ -1011,7 +1107,7 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                             ))}
                           </ul>
                         </TableCell>
-                      </TableRow>
+                      </TableRow> */}
                       <TableRow>
                         <TableHeaderCell>Propósito Actividad</TableHeaderCell>
                         <TableCell>{modalData.proposito_actividad}</TableCell>
@@ -1029,6 +1125,10 @@ export function IpesTable({ ipes }: { ipes: any[] }) {
                       <TableRow>
                         <TableHeaderCell>Tipo Actividad</TableHeaderCell>
                         <TableCell>{modalData.tipo_actividad}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableHeaderCell>Tiempo Actividad</TableHeaderCell>
+                        <TableCell>{modalData.tiempo_actividad}</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>

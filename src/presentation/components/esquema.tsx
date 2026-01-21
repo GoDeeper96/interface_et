@@ -12,6 +12,8 @@ import {
   TableRow,
   Button,
   Input,
+  Combobox,
+  Option,
 } from "@fluentui/react-components"
 import { exportEsquemaCursoToExcel } from "../utils/export-excel"
 import {
@@ -21,6 +23,8 @@ import {
   Edit20Regular,
   Save20Regular,
   Dismiss20Regular,
+  Add20Regular,
+  Delete20Regular,
 } from "@fluentui/react-icons"
 import { useDocumentStore } from "../../infrastructure/store/document-store"
 
@@ -229,6 +233,102 @@ export function EsquemaTable({
     exportEsquemaCursoToExcel(esquemaCurso)
   }
 
+  const densidadOptions = ["Baja", "Media", "Alta"] as const
+
+  const handleDensidadChange = (
+    unidadIdx: number,
+    semanaIdx: number,
+    temaIdx: number,
+    value: string,
+  ) => {
+    if (!localEsquema) return
+    const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+    newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].densidad = value
+    setLocalEsquema(newEsquema)
+  }
+
+  const handleAddSubtema = (unidadIdx: number, semanaIdx: number, temaIdx: number) => {
+    if (!localEsquema) return
+    const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+    const newSubtema = {
+      titulo_subtema: "Nuevo Subtema",
+      logro_de_aprendizaje_subtema: "",
+      apartados: [],
+    }
+    newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas.push(newSubtema)
+    setLocalEsquema(newEsquema)
+  }
+
+  const handleDeleteSubtema = (
+    unidadIdx: number,
+    semanaIdx: number,
+    temaIdx: number,
+    subtemaIdx: number,
+  ) => {
+    if (!localEsquema) return
+    const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+    newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas.splice(subtemaIdx, 1)
+    setLocalEsquema(newEsquema)
+  }
+
+  const handleAddApartado = (
+    unidadIdx: number,
+    semanaIdx: number,
+    temaIdx: number,
+    subtemaIdx: number,
+  ) => {
+    if (!localEsquema) return
+    const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+    newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas[subtemaIdx].apartados.push(
+      "Nuevo Apartado",
+    )
+    setLocalEsquema(newEsquema)
+  }
+
+  const handleDeleteApartado = (
+    unidadIdx: number,
+    semanaIdx: number,
+    temaIdx: number,
+    subtemaIdx: number,
+    apartadoIdx: number,
+  ) => {
+    if (!localEsquema) return
+    const newEsquema = JSON.parse(JSON.stringify(localEsquema))
+    newEsquema.esquemas_unidad[unidadIdx].semanas[semanaIdx].temas[temaIdx].subtemas[subtemaIdx].apartados.splice(
+      apartadoIdx,
+      1,
+    )
+    setLocalEsquema(newEsquema)
+  }
+
+  const renderDensidadCell = (
+    unidadIdx: number,
+    semanaIdx: number,
+    temaIdx: number,
+    value: string,
+  ) => {
+    if (isEditing) {
+      return (
+        <Combobox
+          value={value || "Media"}
+          onOptionSelect={(_, data) => {
+            if (data.optionValue) {
+              handleDensidadChange(unidadIdx, semanaIdx, temaIdx, data.optionValue)
+            }
+          }}
+          style={{ minWidth: "100px" }}
+        >
+          {densidadOptions.map((opt) => (
+            <Option key={opt} value={opt}>
+              {opt}
+            </Option>
+          ))}
+        </Combobox>
+      )
+    }
+    return <span>{value || "Media"}</span>
+  }
+
   const renderEditableCell = (path: string, value: string, style?: React.CSSProperties, isEditable = true) => {
     const isCurrentlyEditing = editingCell?.path === path
 
@@ -344,7 +444,6 @@ export function EsquemaTable({
           style={{
             width: "3px",
             height: "40px",
-              
             background: "#0078d4",
             borderRadius: "2px",
             opacity: 0.6,
@@ -359,7 +458,6 @@ export function EsquemaTable({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-          
             height: "100%",
             background: "white",
             borderRadius: "12px",
@@ -372,7 +470,6 @@ export function EsquemaTable({
               writingMode: "vertical-rl",
               textOrientation: "mixed",
               fontSize: "14px",
-              
               fontWeight: 600,
               color: "#333",
               whiteSpace: "nowrap",
@@ -389,7 +486,6 @@ export function EsquemaTable({
               justifyContent: "space-between",
               alignItems: "center",
               gap: "8px",
-              
               padding: "12px 8px 12px 16px",
               background: "white",
               borderBottom: "1px solid #e0e0e0",
@@ -431,7 +527,6 @@ export function EsquemaTable({
               flex: 1,
               overflowY: "auto",
               paddingLeft: "8px",
-              marginBottom:"4rem"
             }}
           >
             <Table>
@@ -441,6 +536,8 @@ export function EsquemaTable({
                   <TableHeaderCell>Nivel</TableHeaderCell>
                   <TableHeaderCell>Descripción</TableHeaderCell>
                   <TableHeaderCell>Logro de Aprendizaje</TableHeaderCell>
+                  <TableHeaderCell>Densidad</TableHeaderCell>
+                  {isEditing && <TableHeaderCell style={{ width: "80px" }}>Acciones</TableHeaderCell>}
                 </TableRow>
               </TableHeader>
 
@@ -479,6 +576,8 @@ export function EsquemaTable({
                             false,
                           )}
                         </TableCell>
+                        <TableCell></TableCell>
+                        {isEditing && <TableCell></TableCell>}
                       </TableRow>
 
                       {isUnidadExpanded &&
@@ -516,6 +615,8 @@ export function EsquemaTable({
                                     false,
                                   )}
                                 </TableCell>
+                                <TableCell></TableCell>
+                                {isEditing && <TableCell></TableCell>}
                               </TableRow>
 
                               {isSemanaExpanded &&
@@ -556,7 +657,7 @@ export function EsquemaTable({
                                             />
                                           )}
                                         </TableCell>
-                                        <TableCell style={{paddingLeft:"25px"}}>Tema</TableCell>
+                                        <TableCell style={{ paddingLeft:"25px"}}>Tema</TableCell>
                                         <TableCell>
                                           {renderEditableCell(
                                             `tema-${unidadIdx}-${semanaIdx}-${temaIdx}-titulo_tema`,
@@ -573,6 +674,23 @@ export function EsquemaTable({
                                             true,
                                           )}
                                         </TableCell>
+                                        <TableCell>
+                                          {renderDensidadCell(unidadIdx, semanaIdx, temaIdx, tema.densidad)}
+                                        </TableCell>
+                                        {isEditing && (
+                                          <TableCell>
+                                            <Button
+                                              appearance="subtle"
+                                              size="small"
+                                              icon={<Add20Regular />}
+                                              title="Agregar Subtema"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleAddSubtema(unidadIdx, semanaIdx, temaIdx)
+                                              }}
+                                            />
+                                          </TableCell>
+                                        )}
                                       </TableRow>
 
                                       {isTemaExpanded &&
@@ -634,6 +752,34 @@ export function EsquemaTable({
                                                     subtema.logro_de_aprendizaje_subtema,
                                                   )}
                                                 </TableCell>
+                                                <TableCell></TableCell>
+                                                {isEditing && (
+                                                  <TableCell>
+                                                    <div style={{ display: "flex", gap: "4px" }}>
+                                                      <Button
+                                                        appearance="subtle"
+                                                        size="small"
+                                                        icon={<Add20Regular />}
+                                                        title="Agregar Apartado"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation()
+                                                          handleAddApartado(unidadIdx, semanaIdx, temaIdx, subIdx)
+                                                        }}
+                                                      />
+                                                      <Button
+                                                        appearance="subtle"
+                                                        size="small"
+                                                        icon={<Delete20Regular />}
+                                                        title="Eliminar Subtema"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation()
+                                                          handleDeleteSubtema(unidadIdx, semanaIdx, temaIdx, subIdx)
+                                                        }}
+                                                        style={{ color: "#d13438" }}
+                                                      />
+                                                    </div>
+                                                  </TableCell>
+                                                )}
                                               </TableRow>
 
                                               {isSubtemaExpanded &&
@@ -645,13 +791,29 @@ export function EsquemaTable({
                                                     <TableCell
                                                       style={{ width: "40px", padding: "8px 8px 8px 104px" }}
                                                     ></TableCell>
-                                                    <TableCell style={{paddingLeft:"50px"}}>{`Apartado ${apIdx+1}` }</TableCell>
-                                                    <TableCell colSpan={2}>
+                                                    <TableCell style={{paddingLeft:"50px"}}>Apartado</TableCell>
+                                                    <TableCell>
                                                       {renderEditableCell(
                                                         `apartado-${unidadIdx}-${semanaIdx}-${temaIdx}-${subIdx}-${apIdx}`,
                                                         apartado,
                                                       )}
                                                     </TableCell>
+                                                    <TableCell></TableCell>
+                                                    {isEditing && (
+                                                      <TableCell>
+                                                        <Button
+                                                          appearance="subtle"
+                                                          size="small"
+                                                          icon={<Delete20Regular />}
+                                                          title="Eliminar Apartado"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleDeleteApartado(unidadIdx, semanaIdx, temaIdx, subIdx, apIdx)
+                                                          }}
+                                                          style={{ color: "#d13438" }}
+                                                        />
+                                                      </TableCell>
+                                                    )}
                                                   </TableRow>
                                                 ))}
                                             </React.Fragment>

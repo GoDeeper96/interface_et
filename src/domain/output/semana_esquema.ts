@@ -12,6 +12,7 @@ export interface SubtemaEsquema{
 export interface TemaEsquema {
     titulo_tema:string
     logro_de_aprendizaje_tema:string
+        densidad: 'Baja' | 'Media' | 'Alta'
     subtemas: SubtemaEsquema[]
 }
 

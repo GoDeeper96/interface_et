@@ -234,47 +234,47 @@ const UploadPage: React.FC = () => {
     }
   }, [isResizingVertical])
 
-  // useEffect(() => {
-  //   if (schemaGenerated || steps.length === 0 || schemaRequestInProgress.current) return
+  useEffect(() => {
+    if (schemaGenerated || steps.length === 0 || schemaRequestInProgress.current) return
 
-  //   const step1 = steps[0]
-  //   const step2 = steps[1]
-  //   const isOnStep2 = currentStepIndex === 1 && currentMiniStepIndex === 0
-  //   const step1Completed = step1?.miniSteps.every((ms) => ms.validationStatus === "success")
+    const step1 = steps[0]
+    const step2 = steps[1]
+    const isOnStep2 = currentStepIndex === 1 && currentMiniStepIndex === 0
+    const step1Completed = step1?.miniSteps.every((ms) => ms.validationStatus === "success")
 
-  //   if (isOnStep2 && step1Completed && step2?.miniSteps[0].validationStatus === "pending") {
-  //     schemaRequestInProgress.current = true
-  //     setLoadingSteps((prev) => ({ ...prev, [`step2_mini0`]: true }))
-  //     handleGenerateSchema(1, 0).finally(() => {
-  //       schemaRequestInProgress.current = false
-  //       setLoadingSteps((prev) => ({ ...prev, [`step2_mini0`]: false }))
-  //     })
-  //   }
-  // }, [schemaGenerated, currentStepIndex, currentMiniStepIndex, steps])
+    if (isOnStep2 && step1Completed && step2?.miniSteps[0].validationStatus === "pending") {
+      schemaRequestInProgress.current = true
+      setLoadingSteps((prev) => ({ ...prev, [`step2_mini0`]: true }))
+      handleGenerateSchema(1, 0).finally(() => {
+        schemaRequestInProgress.current = false
+        setLoadingSteps((prev) => ({ ...prev, [`step2_mini0`]: false }))
+      })
+    }
+  }, [schemaGenerated, currentStepIndex, currentMiniStepIndex, steps])
 
-  // useEffect(() => {
-  //   if (ipesGenerated || steps.length === 0 || ipesRequestInProgress.current) return
+  useEffect(() => {
+    if (ipesGenerated || steps.length === 0 || ipesRequestInProgress.current) return
 
-  //   const step1 = steps[0]
-  //   const step2 = steps[1]
-  //   const step3 = steps[2]
-  //   const isOnStep3 = currentStepIndex === 2 && currentMiniStepIndex === 0
+    const step1 = steps[0]
+    const step2 = steps[1]
+    const step3 = steps[2]
+    const isOnStep3 = currentStepIndex === 2 && currentMiniStepIndex === 0
 
-  //   if (!isOnStep3) return
+    if (!isOnStep3) return
 
-  //   const step1Completed = step1?.miniSteps.every((ms) => ms.validationStatus === "success")
-  //   const step2Completed = step2?.miniSteps.every((ms) => ms.validationStatus === "success")
+    const step1Completed = step1?.miniSteps.every((ms) => ms.validationStatus === "success")
+    const step2Completed = step2?.miniSteps.every((ms) => ms.validationStatus === "success")
 
-  //   if (step1Completed && step2Completed && step3?.miniSteps[0].validationStatus === "pending") {
-  //     console.log("Generando IPES automáticamente...")
-  //     ipesRequestInProgress.current = true
-  //     setLoadingSteps((prev) => ({ ...prev, [`step3_mini0`]: true }))
-  //     handleGenerateIpes(2, 0).finally(() => {
-  //       ipesRequestInProgress.current = false
-  //       setLoadingSteps((prev) => ({ ...prev, [`step3_mini0`]: false }))
-  //     })
-  //   }
-  // }, [ipesGenerated, currentStepIndex, currentMiniStepIndex, steps])
+    if (step1Completed && step2Completed && step3?.miniSteps[0].validationStatus === "pending") {
+      console.log("Generando IPES automáticamente...")
+      ipesRequestInProgress.current = true
+      setLoadingSteps((prev) => ({ ...prev, [`step3_mini0`]: true }))
+      handleGenerateIpes(2, 0).finally(() => {
+        ipesRequestInProgress.current = false
+        setLoadingSteps((prev) => ({ ...prev, [`step3_mini0`]: false }))
+      })
+    }
+  }, [ipesGenerated, currentStepIndex, currentMiniStepIndex, steps])
     const executeStep = (stepId, miniStepId) => {
       if (stepId === "step3") return handleGenerateIpes(2, 0)
       if (stepId === "step2") return handleGenerateSchema(1,0)

@@ -26,12 +26,12 @@ export const useIpesHandler = ({ onMessage }: UseIpesHandlerProps) => {
   const handleGenerateIpes = useCallback(
     async (stepIdx: number, miniStepIdx: number) => {
       const stepKey = `step${stepIdx}_mini${miniStepIdx}`
-      const { stepLoadingStates } = useDocumentStore.getState()
+      // const { stepLoadingStates } = useDocumentStore.getState()
 
-      if (stepLoadingStates[stepKey]) {
-        console.log(`[v0] IPES generation already in progress for ${stepKey}, skipping`)
-        return
-      }
+      // if (stepLoadingStates[stepKey]) {
+      //   console.log(`[v0] IPES generation already in progress for ${stepKey}, skipping`)
+      //   return
+      // }
 
       const { formValues } = useDocumentStore.getState()
 
