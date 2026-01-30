@@ -526,6 +526,7 @@ export function EsquemaTable({
             style={{
               flex: 1,
               overflowY: "auto",
+              marginBottom:"4rem",
               paddingLeft: "8px",
             }}
           >
