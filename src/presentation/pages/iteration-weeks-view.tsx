@@ -956,6 +956,23 @@ export default function IterationWeeksView() {
               <SparkleRegular style={{ fontSize: 14 }} /> Gestionar Generación con IA
             </button>
           )}
+
+          {/* Solicitar Revisión — moved here next to the Híbrido/IA tag
+              (2026-07-24, was in IPESWeekEditor's own per-week toolbar) so
+              it reads as a course-level action. Still just jumps to the
+              Compuerta tab — the actual per-session submit-to-review lives
+              there (compuerta-panel.tsx); this is not yet a bulk "submit
+              every week" action. */}
+          {artifact === "ipes" && canEdit && (
+            <button
+              className="btn btn-primary"
+              data-tour="ipes-solicitar-revision-btn"
+              onClick={() => setActiveTab("compuerta")}
+              title="Ir a la pestaña Compuerta para enviar esta sesión a revisión"
+            >
+              Solicitar Revisión
+            </button>
+          )}
         </div>
 
         {/* Curso/Modalidad sizing (14px, 20px icons) and weight (700/400)
@@ -1365,7 +1382,6 @@ export default function IterationWeeksView() {
               weekCount={WEEK_COUNT}
               unitsByWeek={unitsByWeek}
               onDedicacionChange={setSessionDedicacionSegundos}
-              onRequestReview={() => setActiveTab("compuerta")}
             />
           )}
           {activeTab === "content" && artifact === "mb" && (
