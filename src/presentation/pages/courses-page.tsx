@@ -1041,14 +1041,14 @@ const CoursesPage: React.FC = () => {
               <div key={g.key} data-tour={i === 0 ? "cursos-row" : undefined} style={{ borderTop: "1px solid #E2E2E2", background: "white" }}>
                 <div onClick={() => onSelectCourse(c)} style={{ display: "flex", alignItems: "center", cursor: "pointer", minHeight: 80 }}>
                   <div style={{ flex: "1 1 0", padding: 16, display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
-                    <div style={{ color: "#1B1B1B", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 400 }}>{c.name}</div>
-                    <div style={{ color: "#1B1B1B", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 400 }}>{c.cod_curso}</div>
+                    <div style={{ color: "#1B1B1B", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 600 }}>{c.name}</div>
+                    <div style={{ color: "#1B1B1B", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 600 }}>{c.cod_curso}</div>
                   </div>
 
                   <div style={{ flex: "1 1 0", padding: 16, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ width: 7, height: 7, borderRadius: "50%", background: modality ? MODALIDAD_BAR_COLOR[modality] : "var(--text-muted)", flexShrink: 0 }} />
-                      <span style={{ color: "#1B1B1B", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 400 }}>
+                      <span style={{ color: "#1B1B1B", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 600 }}>
                         {modality ? MODALIDAD_SHORT_LABEL[modality] : "Sin modalidad"}
                       </span>
                       <button
