@@ -84,6 +84,15 @@ export const CABECERA_DEFS: Record<string, string> = {
   importancia:     "Por qué este tema importa — el gancho que justifica al estudiante el esfuerzo de la semana.",
 }
 
+// Short concrete examples for the empty-state placeholder — replaces the
+// generic "Sin definir" (told the user nothing, felt like a dead end) with
+// something that models the expected shape/length, per direct instruction.
+export const CABECERA_PLACEHOLDERS: Record<UtilidadField, string> = {
+  nombre_sesion: "Ej: Introducción a las bases de datos relacionales",
+  logro_semana:  "Ej: El estudiante diseña un modelo entidad-relación normalizado para un caso real",
+  importancia:   "Ej: Sin un buen diseño de base de datos, toda la aplicación que construyan después falla",
+}
+
 export function fmtHMS(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600)
   const m = Math.floor((totalSeconds % 3600) / 60)
@@ -213,14 +222,14 @@ type UtilidadField = "nombre_sesion" | "logro_semana" | "importancia"
 // when the caller doesn't wire onChange (mb-week-editor.tsx: Material Base
 // doesn't own this data — it's a read-only copy fetched from IPES for
 // display, there's no save path for edits made from that view).
-function Value({ value, colSpan, align, onChange }: { value: string; colSpan?: number; align?: { h?: "left" | "center"; v?: "top" | "middle" }; onChange?: (value: string) => void }) {
+function Value({ id, value, colSpan, align, onChange }: { id: UtilidadField; value: string; colSpan?: number; align?: { h?: "left" | "center"; v?: "top" | "middle" }; onChange?: (value: string) => void }) {
   const isEmpty = !value
   return (
     <td colSpan={colSpan} style={{ verticalAlign: align?.v ?? "top" }}>
       {onChange ? (
-        <AutoGrowTextarea className="xlsm-textarea" style={{ textAlign: align?.h ?? "left" }} rows={1} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Sin definir" />
+        <AutoGrowTextarea className="xlsm-textarea" style={{ textAlign: align?.h ?? "left" }} rows={1} value={value} onChange={(e) => onChange(e.target.value)} placeholder={CABECERA_PLACEHOLDERS[id]} />
       ) : (
-        <div className={`xlsm-value-cell${isEmpty ? " empty" : ""}`} style={{ textAlign: align?.h ?? "left" }}>{value || "Sin definir"}</div>
+        <div className={`xlsm-value-cell${isEmpty ? " empty" : ""}`} style={{ textAlign: align?.h ?? "left" }}>{value || CABECERA_PLACEHOLDERS[id]}</div>
       )}
     </td>
   )
@@ -287,15 +296,15 @@ export function Cabecera({ data, showDefs, onChangeField, top = 49 }: Props) {
           <tr>
             <td rowSpan={3} className="xlsm-label-cell" style={{ background: "var(--blue-light)", color: "var(--blue-dark)", textAlign: "center", verticalAlign: "middle" }}>Utilidad</td>
             <Label id="nombre_sesion" showDefs={showDefs}>Nombre de la sesión:</Label>
-            <Value value={data.nombre_sesion} colSpan={2} onChange={onChangeField && ((v) => onChangeField("nombre_sesion", v))} />
+            <Value id="nombre_sesion" value={data.nombre_sesion} colSpan={2} onChange={onChangeField && ((v) => onChangeField("nombre_sesion", v))} />
           </tr>
           <tr>
             <Label id="logro_semana" showDefs={showDefs}>Logro de la semana:</Label>
-            <Value value={data.logro_semana} colSpan={2} onChange={onChangeField && ((v) => onChangeField("logro_semana", v))} />
+            <Value id="logro_semana" value={data.logro_semana} colSpan={2} onChange={onChangeField && ((v) => onChangeField("logro_semana", v))} />
           </tr>
           <tr>
             <Label id="importancia" showDefs={showDefs}>Importancia:</Label>
-            <Value value={data.importancia} colSpan={2} onChange={onChangeField && ((v) => onChangeField("importancia", v))} />
+            <Value id="importancia" value={data.importancia} colSpan={2} onChange={onChangeField && ((v) => onChangeField("importancia", v))} />
           </tr>
         </tbody>
       </table>
