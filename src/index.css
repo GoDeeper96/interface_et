@@ -1,6 +1,931 @@
-html, body {
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  /* ET brand — real UTP Figma blue ramp (Carbon Blue 60/70/80), confirmed across
+     every component spec shared: buttons #0F62FE, hover/accent bars #0043CE,
+     active/focus outline #002D9C */
+  --blue:           #0F62FE;
+  --blue-dark:      #0043CE;
+  --blue-light:     #EDF5FF;
+  --blue-mid:       #D0E2FF;
+
+  /* UTP Teal — official accent color for AI-generation actions
+     (e.g. "Generar Sesión con IA"), per Figma primary #005F4C */
+  --teal:           #005F4C;
+  --teal-dark:      #00473A;
+
+  /* Sidebar — primary blue (matches Figma #005F4C primary) */
+  --sidebar-bg:      var(--blue);
+  --sidebar-hover:   rgba(255,255,255,.08);
+  --sidebar-width:   88px;
+
+  /* Interactive states — mapped from Figma teal tokens to blue */
+  --blue-pressed:     #002D9C;
+  --text-disabled:    #95A4A4;
+  --neutral-hover:    #E2E2E2;
+  --neutral-focus:    #C6C6C6;
+
+  /* Content surfaces — from UTP+ class #F9F9FB / cursos_UI.css */
+  --topbar-bg:    #FFFFFF;
+  --content-bg:   #F9F9FB;
+  --surface:      #FFFFFF;
+
+  /* Borders — UTP design tokens */
+  --border:       #CCCCCC;
+  --border-input: #848D95;
+  --border-row:   #E2E2E2;
+
+  /* Typography — UTP design tokens */
+  --text-strong:    #161D1F;
+  --text-primary:   #333333;
+  --text-secondary: #4F6168;
+  --text-muted:     #848D95;
+  --text-white:     #FFFFFF;
+
+  /* States — UTP design tokens */
+  --success:     #007F38;
+  --success-bg:  #E6F4ED;
+  --warning:     #D97706;
+  --warning-bg:  #FFFBEB;
+  --danger:      #E8212B;
+  --danger-bg:   #FEE8E9;
+  --info:           #1893FF;
+  --info-bg:        #E8F3FF;
+  --surface-subtle: #F9FAFB;
+  /* Table/list row background — deliberately a visible step down from
+     --content-bg/--surface-subtle (#F9F9FB/#F9FAFB are nearly identical to
+     each other, rows were blending into the page). Matches the UTP
+     "Reportes más recientes" reference component's row color (#F4F4F4). */
+  --row-bg:         #F0F0F0;
+
+  --topbar-height:  72px;
+  --radius-sm:      4px;
+  --radius-md:      8px;
+  --radius-lg:      12px;
+  --radius-xl:      16px;
+
+  /* Shadows — Figma uses #EAEEF1 (warm light gray), not rgba black */
+  --shadow-sm:    0 1px 2px #EAEEF1;
+  --shadow-md:    0 2px 8px #E0E5EA;
+  --shadow-lg:    0 8px 24px rgba(0,0,0,.12);
+  --shadow-figma: drop-shadow(0px 1.2px 4px #EAEEF1);
+}
+
+html, body, #root {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
   height: 100%;
+  font-family: 'Lato', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: var(--text-primary);
+  background: var(--content-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CCCCCC; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #848D95; }
+
+/* ── Shell ── */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar — 88px wide, UTP+ class spec ── */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width .18s ease;
+}
+
+.sidebar.sidebar-collapsed {
+  width: 0;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+/* On short laptop viewports the nav items (80px each) can exceed the
+   available height — keep the list scrollable instead of clipping the
+   last item (e.g. Configuración) under overflow: hidden. */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.25);
+  border-radius: 2px;
+}
+
+.sidebar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 88px;
+  height: 80px;
+  cursor: pointer;
+  color: rgba(255,255,255,.55);
+  transition: background .12s, color .12s;
+  user-select: none;
+  position: relative;
+}
+
+.sidebar-item:hover {
+  background: var(--sidebar-hover);
+  color: rgba(255,255,255,.9);
+}
+
+.sidebar-item.active {
+  background: #F9F9FB;
+  color: var(--blue);
+}
+
+/* 4px left bar on active item — Figma: top/bottom 5% inset (4px on 80px item) */
+.sidebar-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  background: var(--blue);
+  border-radius: 2px;
+}
+
+.sidebar-icon {
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+/* Figma nav label: Select 02 — 12px/400 Lato, line-height 16px */
+.sidebar-label {
+  font-size: 12px;
+  font-weight: 400;
+  font-family: 'Lato', sans-serif;
+  text-align: center;
+  line-height: 16px;
+}
+
+/* ── Main area ── */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ── Topbar — Figma: 72px, white bg, 0px 1px 0px #EBF1F5 shadow ── */
+.topbar {
+  height: var(--topbar-height);
+  background: var(--topbar-bg);
+  box-shadow: 0px 1px 0px #EBF1F5;
+  display: flex;
+  align-items: center;
+  padding: 0 24px 0 32px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Breadcrumb strip ── */
+/* Figma: inline-flex, gap 2px, each item 24px height, 12px Lato, primary color for links + chevron */
+.breadcrumb-strip {
+  height: 80px;
+  background: #f8f9fb;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 2px;
+  font-size: 12px;
+  font-family: 'Lato', sans-serif;
+  flex-shrink: 0;
+}
+
+/* Non-last crumb: text + chevron side by side */
+.bc-item {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  gap: 2px;
+  color: var(--blue);
+}
+
+.bc-link {
+  color: var(--blue);
+  font-weight: 400;
+  line-height: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .12s;
+}
+.bc-link:hover { color: var(--blue-dark); }
+
+/* Chevron inherits the item color */
+.bc-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--blue);
+  padding: 2px;
+}
+
+/* Active/current crumb: bold dark text — Figma #161D1F, no chevron after */
+.bc-current {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  color: var(--text-strong);
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
+  transition: background .12s;
+}
+.topbar-user:hover { background: var(--content-bg); }
+
+.topbar-user-greeting {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+/* Figma: "Hola" 14px/400 + ", Name" 14px/700, color #161D1F, line-height 20px */
+.topbar-user-name {
+  font-size: 14px;
+  color: var(--text-strong);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+/* Figma: role 12px/400 #4F6168, right-aligned, line-height 16px */
+.topbar-user-role {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 16px;
+  text-align: right;
+}
+
+/* Figma avatar: 40×40, #4A4A4A bg (dark gray), full circle */
+.topbar-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: #4A4A4A;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'Lato', sans-serif;
+}
+
+/* ── Page area ── */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.page-inner {
+  padding: 24px 28px;
+  max-width: 1320px;
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a, .breadcrumb span.bc-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .12s;
+}
+.breadcrumb a:hover, .breadcrumb span.bc-link:hover { color: var(--blue); }
+.breadcrumb .sep { color: var(--border); margin: 0 2px; }
+.breadcrumb .current { color: var(--text-primary); font-weight: 500; }
+
+/* ── Page header — Figma: column, gap 16px (title + meta block) ── */
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Title row — allows inline CTA only if no subtitle block is used */
+.page-header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Meta block below title — column, gap 8px: subtitle + meta-info row */
+.page-meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Meta info row: icon+text on left, CTA button on right */
+.page-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Title/Title 01 Bold — Figma: 24px/700 Lato, line-height 32px, color #1B1B1B */
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0 0 4px;
+  line-height: 32px;
+  font-family: 'Lato', sans-serif;
+}
+
+.page-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.tab-item {
+  padding: 9px 16px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .12s, border-color .12s;
+  user-select: none;
+  font-family: 'Lato', sans-serif;
+}
+
+.tab-item:hover { color: var(--text-primary); }
+.tab-item.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
+
+/* ── Chips / tags ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  border: 1px solid;
+  white-space: nowrap;
+  font-family: 'Lato', sans-serif;
+}
+
+.chip-default  { background: #F0F0F0; border-color: #CCCCCC; color: var(--text-secondary); }
+.chip-blue     { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue); }
+.chip-success  { background: var(--success-bg); border-color: #A7D4B8; color: var(--success); }
+.chip-warning  { background: var(--warning-bg); border-color: #FDE68A; color: var(--warning); }
+.chip-danger   { background: var(--danger-bg);  border-color: #F5AAAE; color: var(--danger); }
+.chip-info     { background: var(--info-bg);    border-color: #A8D4FF; color: var(--info); }
+
+/* ── Cards — Figma: small items 8px, content panels 16px ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+}
+
+/* Large content panel — Figma rounded-[16px], no border, light shadow */
+.card-lg {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+/* ── Data table — Figma: drop-shadow(0px 1.2px 4px #EAEEF1), radius 8px ── */
+/* Header: 48px, #F0F0F0 bg, 14px/700 Lato */
+/* Rows: 80px, white, border-top: 1px solid #E2E2E2 */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-family: 'Lato', sans-serif;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  filter: var(--shadow-figma);
+}
+
+.data-table thead tr {
+  background: #F0F0F0;
+}
+
+.data-table th {
+  padding: 0 16px;
+  height: 48px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  font-family: 'Lato', sans-serif;
+}
+
+.data-table td {
+  padding: 16px;
+  border-top: 1px solid var(--border-row);
+  color: var(--text-primary);
+  vertical-align: middle;
+  height: 80px;
+  font-size: 14px;
+}
+
+.data-table tbody tr:first-child td { border-top: none; }
+.data-table tbody tr { transition: background .1s; }
+.data-table tbody tr:hover { background: var(--blue-light); cursor: pointer; }
+.data-table tbody tr:active { background: var(--blue-mid); }
+
+/* ── Progress bar ── */
+.progress {
+  height: 4px;
+  background: #E2E2E2;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 2px;
+  transition: width .3s ease;
+}
+.progress-fill.success { background: var(--success); }
+
+/* ── Badges — UTP+ class spec: 12px/700, border-radius 4px ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-family: 'Lato', sans-serif;
+}
+
+.badge-success  { background: var(--success-bg); color: var(--success); }
+.badge-primary  { background: var(--blue-light); color: var(--blue); }
+.badge-warning  { background: var(--warning-bg); color: var(--warning); }
+.badge-danger   { background: var(--danger-bg);  color: var(--danger); }
+.badge-info     { background: var(--info-bg);    color: var(--info); }
+.badge-default  { background: #F0F0F0;           color: var(--text-secondary); }
+
+.badge-danger.blue-style { background: var(--blue-light); color: var(--blue); }
+
+/* ── Buttons — Figma: 40px h, px-24px, border-radius 4px, 14px/700 Lato ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Lato', sans-serif;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s, border-color .12s, color .12s;
+  white-space: nowrap;
+  text-decoration: none;
+  height: 40px;
+  min-height: 40px;
+}
+
+/* Figma disabled: explicit bg + text, not opacity */
+.btn:disabled {
+  background: var(--neutral-hover) !important;
+  color: var(--text-disabled) !important;
+  border-color: var(--neutral-hover) !important;
+  cursor: not-allowed;
+}
+
+/* Primary — Figma states: enabled #1A73E8 → hover #1558B0 → pressed #0F3D7A */
+.btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn-primary:hover:not(:disabled) { background: var(--blue-dark); border-color: var(--blue-dark); }
+.btn-primary:active:not(:disabled) { background: var(--blue-pressed); border-color: var(--blue-pressed); }
+
+/* Outlined — Figma neutral hover: #E2E2E2, focus: #C6C6C6 */
+.btn-outline { background: var(--surface); color: var(--text-primary); border-color: var(--border); }
+.btn-outline:hover:not(:disabled) { background: var(--neutral-hover); }
+.btn-outline:active:not(:disabled) { background: var(--neutral-focus); }
+
+/* Ghost */
+.btn-ghost { background: transparent; color: var(--text-secondary); border-color: transparent; }
+.btn-ghost:hover:not(:disabled) { background: var(--neutral-hover); color: var(--text-primary); }
+.btn-ghost:active:not(:disabled) { background: var(--neutral-focus); color: var(--text-primary); }
+
+/* Outlined primary tint — for secondary actions with brand color */
+.btn-outline-primary { background: transparent; color: var(--blue); border-color: var(--blue); }
+.btn-outline-primary:hover:not(:disabled) { background: var(--blue-light); }
+.btn-outline-primary:active:not(:disabled) { background: var(--blue-mid); }
+
+.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-danger:hover:not(:disabled) { background: #C01A22; }
+
+.btn-sm { padding: 5px 12px; font-size: 12px; height: 32px; min-height: 32px; }
+.btn-lg { padding: 14px 24px; font-size: 14px; height: 48px; min-height: 48px; }
+
+/* ── Icon button ── */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  font-family: 'Lato', sans-serif;
+}
+.icon-btn:hover { background: var(--neutral-hover); color: var(--text-primary); }
+.icon-btn:active { background: var(--neutral-focus); color: var(--text-primary); }
+.icon-btn.danger:hover { background: var(--danger-bg); color: var(--danger); }
+
+/* ── Form elements — UTP+ class spec: 40px height, 1px solid #848D95, border-radius 4px ── */
+.field { display: flex; flex-direction: column; gap: 4px; }
+
+.field-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 20px;
+  font-family: 'Lato', sans-serif;
+}
+
+.field-input, .field-textarea, .field-select {
+  width: 100%;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 15px;
+  font-family: 'Lato', sans-serif;
+  color: var(--text-primary);
+  background: var(--surface);
+  outline: none;
+  height: 40px;
+  transition: border-color .12s, box-shadow .12s;
+}
+
+.field-textarea {
+  height: auto;
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.field-input:focus,
+.field-textarea:focus,
+.field-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,115,232,.15);
+}
+
+.field-input::placeholder,
+.field-textarea::placeholder { color: var(--text-muted); }
+
+.field-helper { font-size: 12px; color: var(--text-secondary); line-height: 16px; }
+.field-error  { font-size: 12px; color: var(--danger); line-height: 16px; }
+.field-char-count { font-size: 12px; color: var(--text-muted); text-align: right; }
+
+/* ── Section title ── */
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Lato', sans-serif;
+}
+
+.section-title::before {
+  content: "";
+  display: block;
+  width: 3px;
+  height: 14px;
+  background: var(--blue);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+.empty-state-icon  { font-size: 40px; margin-bottom: 14px; opacity: .3; }
+.empty-state-title { font-size: 16px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; font-family: 'Lato', sans-serif; }
+.empty-state-desc  { font-size: 14px; color: var(--text-muted); }
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* Figma modal: 4px radius, 40px padding, very light shadow (#EAEEF1) */
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  filter: drop-shadow(0px 1.2px 2px #EAEEF1);
+  box-shadow: var(--shadow-md);
+  padding: 40px;
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Figma: Title 02 Bold — 20px/700, line-height 32px, color #161D1F */
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0 0 16px;
+  font-family: 'Lato', sans-serif;
+  line-height: 32px;
+}
+
+.modal-body {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 32px;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+/* ── Divider ── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── Search bar ── */
+.search-bar {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  background: var(--surface);
+  overflow: hidden;
+  height: 40px;
+  transition: border-color .12s, box-shadow .12s;
+}
+.search-bar:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,115,232,.15);
+}
+.search-bar input {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-family: 'Lato', sans-serif;
+  color: var(--text-primary);
+  background: transparent;
+}
+.search-bar input::placeholder { color: var(--text-muted); }
+.search-bar .search-icon {
+  padding: 0 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Loading spinner ── */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #E2E2E2;
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+}
+.spinner-sm {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+  flex-shrink: 0;
+}
+.spinner-sm-dark {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #E2E2E2;
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+  flex-shrink: 0;
+}
+.spinner-lg {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid #E2E2E2;
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Filter toolbar — UTP+ class spec: padding 24px, gap 16px, #FAFAFA bg, 1px solid #CCCCCC ── */
+.filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #FAFAFA;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  min-height: 80px;
+}
+
+/* ── UTP date field — native picker invisible but clickable, custom icon drawn on top ── */
+.utp-date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ── Select / dropdown ── */
+select.field-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23848D95' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+
+/* ── xlsm-table — reproduces NuevoIPES.xlsm's exact row/column divisions
+   (same field positions LXDs already know from Excel) using our own colors
+   and fonts. Shared by ipes-week-editor.tsx, ipes-cabecera.tsx, and
+   mb-week-editor.tsx — not scoped to one component's local <style>. ── */
+.xlsm-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.xlsm-table th, .xlsm-table td {
+  border: 1px solid var(--border); padding: 0; vertical-align: top; text-align: left;
+}
+.xlsm-table th {
+  padding: 8px 10px; background: var(--content-bg); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+  text-align: center; /* xlsm: every column-header row (B17/B26/B28) is horizontal:center */
+}
+/* xlsm: every time value (H16, F19, tiempo_estimado, tiempo_actividad…) is horizontal:center */
+.xlsm-input[type="time"] { text-align: center; }
+.xlsm-label-cell {
+  padding: 8px 10px; font-weight: 700; font-size: 12px; color: var(--text-strong);
+  background: var(--surface); white-space: nowrap;
+}
+.xlsm-input, .xlsm-textarea, .xlsm-select {
+  width: 100%; box-sizing: border-box; border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 13.5px; color: var(--text-strong); padding: 8px 10px;
+}
+.xlsm-input:disabled, .xlsm-textarea:disabled, .xlsm-select:disabled { color: var(--text-secondary); }
+.xlsm-input:focus, .xlsm-textarea:focus, .xlsm-select:focus { box-shadow: inset 0 0 0 2px rgba(15,98,254,.25); }
+.xlsm-textarea { resize: vertical; min-height: 60px; line-height: 1.5; display: block; }
+.xlsm-def { padding: 0 10px 8px; margin: 0; font-size: 11px; color: var(--text-muted); font-style: italic; line-height: 1.4; }
+.xlsm-value-cell { padding: 8px 10px; font-size: 13.5px; color: var(--text-strong); line-height: 1.5; }
+.xlsm-value-cell.empty { color: var(--text-muted); font-style: italic; }
+
+/* ── splitter-handle — a real drag bar (à la antd's Splitter, reimplemented
+   without the dependency), not a corner-resize icon. Transparent at rest; on
+   hover/drag it tints and shows a short grip bar, same as a real split-pane
+   divider. axis="x": vertical line between side-by-side panels (drag left/
+   right). axis="y": horizontal line between stacked panels/cards (drag up/
+   down). ── */
+.splitter-handle {
+  position: relative; flex-shrink: 0; background: transparent;
+  transition: background .15s;
+}
+.splitter-handle:hover, .splitter-handle.active { background: rgba(15, 98, 254, .12); }
+.splitter-handle-x { width: 7px; cursor: col-resize; }
+.splitter-handle-y { width: 100%; height: 7px; cursor: row-resize; }
+.splitter-grip {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: var(--border); border-radius: 3px; transition: background .15s;
+}
+.splitter-handle-x .splitter-grip { width: 3px; height: 26px; }
+.splitter-handle-y .splitter-grip { width: 26px; height: 3px; }
+.splitter-handle:hover .splitter-grip, .splitter-handle.active .splitter-grip { background: var(--blue); }
+
+/* ── ai-assist-btn — a slow, subtle light sweep so the AI icon reads as
+   "interactive/alive" without being distracting: mostly still, a brief
+   diagonal glint every few seconds. Disabled under reduced-motion. ── */
+.ai-assist-btn { position: relative; overflow: hidden; }
+.ai-assist-btn::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, .65) 50%, transparent 58%);
+  background-size: 260% 100%; background-position: 160% 0;
+  animation: ai-btn-shine 3.6s ease-in-out infinite;
+}
+@keyframes ai-btn-shine {
+  0%, 82% { background-position: 160% 0; }
+  100% { background-position: -160% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-assist-btn::after { animation: none; }
 }
