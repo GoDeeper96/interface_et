@@ -172,6 +172,11 @@ interface Props {
   // header (below "Logro de la unidad") instead of inside this editor's own
   // Cabecera — see SessionTimeRow in ipes-cabecera.tsx.
   onDedicacionChange?: (totalSegundos: number) => void
+  // Surfaces the "Solicitar Revisión" action in this editor's own toolbar
+  // (the send-to-review flow itself still lives in compuerta-panel.tsx,
+  // reached via the Compuerta tab — this just jumps there) — added so the
+  // action has a visible spot now that Guardar is hidden, see 2026-07-24.
+  onRequestReview?: () => void
 }
 
 function Spinner() {
@@ -379,7 +384,7 @@ function TipoRecursoSelect({ value, onChange, disabled, showDefs, bare }: { valu
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function IPESWeekEditor({ iterationId, weekNumber, sessionNumber = 1, sessionCount = 1, readonly, onChange, userRole, focusMode = false, onToggleFocusMode, onNavigateWeek, weekCount = 18, unitsByWeek, onDedicacionChange }: Props) {
+export default function IPESWeekEditor({ iterationId, weekNumber, sessionNumber = 1, sessionCount = 1, readonly, onChange, userRole, focusMode = false, onToggleFocusMode, onNavigateWeek, weekCount = 18, unitsByWeek, onDedicacionChange, onRequestReview }: Props) {
   const [data, setData]         = useState<IPESData | null>(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
@@ -918,7 +923,18 @@ export default function IPESWeekEditor({ iterationId, weekNumber, sessionNumber 
             </button>
           ) : readonly ? (
             <span style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>Solo lectura</span>
-          ) : !isRO ? null : (
+          ) : !isRO ? (
+            onRequestReview && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={onRequestReview}
+                data-tour="ipes-solicitar-revision-btn"
+                title="Ir a la pestaña Compuerta para enviar esta sesión a revisión"
+              >
+                Solicitar Revisión
+              </button>
+            )
+          ) : (
             <span style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>{REVIEW_STATUS_LABEL[currentVersion.review_status]} — no editable</span>
           )}
         </div>

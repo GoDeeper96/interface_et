@@ -43,8 +43,11 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   )
 }
 
-function NotificationRow({ entry, onRead }: { entry: ActivityEntry; onRead: () => void }) {
+function NotificationRow({
+  entry, onRead, expanded, onToggleExpand,
+}: { entry: ActivityEntry; onRead: () => void; expanded: boolean; onToggleExpand: () => void }) {
   const Icon = entry.kind === "success" ? CheckmarkCircleRegular : DismissCircleRegular
+  const hasMore = !!entry.detail
   return (
     <div
       onClick={onRead}
@@ -61,15 +64,33 @@ function NotificationRow({ entry, onRead }: { entry: ActivityEntry; onRead: () =
         <span style={{
           flex: 1, minWidth: 0, color: "var(--text-strong)", fontSize: 16, fontFamily: "Lato",
           fontWeight: entry.read ? 400 : 700, lineHeight: "24px",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          overflow: expanded ? "visible" : "hidden",
+          textOverflow: expanded ? "clip" : "ellipsis",
+          whiteSpace: expanded ? "normal" : "nowrap",
         }}>
           {entry.message}
         </span>
         <span style={{ color: "var(--text-secondary)", fontSize: 14, fontFamily: "Lato", flexShrink: 0, textAlign: "right" }}>
           {timeLabel(entry.timestamp)}
         </span>
+        {hasMore && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleExpand() }}
+            title={expanded ? "Ocultar detalle" : "Ver detalle completo"}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 22, height: 22, flexShrink: 0, padding: 0,
+              background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
+            }}
+          >
+            {expanded
+              ? <ChevronUpRegular style={{ fontSize: 14 }} />
+              : <ChevronDownRegular style={{ fontSize: 14 }} />}
+          </button>
+        )}
       </div>
-      {entry.detail && (
+      {expanded && entry.detail && (
         <div style={{ paddingLeft: 28, color: "var(--text-secondary)", fontSize: 14, fontFamily: "Lato", lineHeight: "20px", wordBreak: "break-word" }}>
           {entry.detail}
         </div>
@@ -85,6 +106,15 @@ export default function ActivityBell() {
   // Per-date-group collapse — all expanded by default, matches Figma
   // ("Expanded=True"); a group is only tracked here once collapsed.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  // Per-notification expand — a row's full title/detail is collapsed by
+  // default (single-line truncated title, detail hidden), the chevron
+  // reveals the rest. Independent from marking read.
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
+  const toggleExpanded = (id: number) => setExpandedIds((prev) => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -142,7 +172,7 @@ export default function ActivityBell() {
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 6px)", right: 0, width: 400, maxHeight: 520,
-          background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
+          background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 0,
           boxShadow: "var(--shadow-md)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }}>
@@ -186,7 +216,13 @@ export default function ActivityBell() {
                       : <ChevronUpRegular style={{ fontSize: 16 }} />}
                   </div>
                   {!isCollapsed && g.items.map((e) => (
-                    <NotificationRow key={e.id} entry={e} onRead={() => !e.read && markRead(e.id)} />
+                    <NotificationRow
+                      key={e.id}
+                      entry={e}
+                      onRead={() => !e.read && markRead(e.id)}
+                      expanded={expandedIds.has(e.id)}
+                      onToggleExpand={() => toggleExpanded(e.id)}
+                    />
                   ))}
                 </div>
               )

@@ -318,21 +318,27 @@ function SessionTree({
                         </button>
                       )}
                     </div>
-                    {!locked && sessionCountForWeek > 1 && Array.from({ length: sessionCountForWeek }, (_, i) => i + 1).map((s) => (
-                      <div
-                        key={s}
-                        onClick={() => onSelect(week, s)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 8, padding: "5px 8px 5px 38px", borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          background: weekSelected && selectedSession === s ? "var(--row-bg)" : "transparent",
-                        }}
-                      >
-                        <div style={{ fontSize: 12.5, fontWeight: weekSelected && selectedSession === s ? 700 : 500, color: "var(--text-secondary)" }}>
-                          Sesión {s}
+                    {!locked && sessionCountForWeek > 1 && Array.from({ length: sessionCountForWeek }, (_, i) => i + 1).map((s) => {
+                      const sessionTema = entry?.session_temas?.[s]
+                      return (
+                        <div
+                          key={s}
+                          onClick={() => onSelect(week, s)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8, padding: "5px 8px 5px 38px", borderRadius: "var(--radius-sm)",
+                            cursor: "pointer",
+                            background: weekSelected && selectedSession === s ? "var(--row-bg)" : "transparent",
+                          }}
+                        >
+                          <div style={{
+                            fontSize: 12.5, fontWeight: weekSelected && selectedSession === s ? 700 : 500, color: "var(--text-secondary)",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>
+                            Sesión {s}{sessionTema ? ` — ${sessionTema}` : ""}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -1359,6 +1365,7 @@ export default function IterationWeeksView() {
               weekCount={WEEK_COUNT}
               unitsByWeek={unitsByWeek}
               onDedicacionChange={setSessionDedicacionSegundos}
+              onRequestReview={() => setActiveTab("compuerta")}
             />
           )}
           {activeTab === "content" && artifact === "mb" && (
